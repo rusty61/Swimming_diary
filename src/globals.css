@@ -1,0 +1,258 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== THEME VARIABLES (dark + green) ===== */
+@layer base {
+  :root {
+    --bg-base: #0b0b10;
+    --bg-top: #0a0a0f;
+
+    /* GREEN ACCENT FAMILY (Softer) */
+    --accent-h: 123;
+    --accent-s: 39%;
+    --accent-l: 57%;
+    --accent: hsl(var(--accent-h) var(--accent-s) var(--accent-l)); /* primary green */
+
+    --accent-strong-h: 123;
+    --accent-strong-s: 39%;
+    --accent-strong-l: 49%;
+    --accent-strong: hsl(var(--accent-strong-h) var(--accent-strong-s) var(--accent-strong-l)); /* deeper green for hover/active */
+
+    --accent-soft-h: 123;
+    --accent-soft-s: 39%;
+    --accent-soft-l: 94%;
+    --accent-soft: hsl(var(--accent-soft-h) var(--accent-soft-s) var(--accent-soft-l)); /* soft green wash for glows/gradients */
+
+    --text-main: #f3f4f6;
+    --text-muted: #9aa3bf;
+
+    --line-subtle: rgba(168, 178, 199, 0.25);
+    --card-bg: #14141b;
+    --card-border: rgba(255,255,255,.08);
+    --shadow: 0 20px 60px rgba(0,0,0,.45), 0 2px 12px rgba(0,0,0,.35);
+
+    /* shadcn/ui mappings */
+    --background: var(--bg-base);
+    --foreground: var(--text-main);
+    --card: var(--card-bg);
+    --card-foreground: var(--text-main);
+    --popover: var(--card-bg);
+    --popover-foreground: var(--text-main);
+    --primary: var(--accent);
+    --primary-foreground: #0b0b10;
+    --secondary: var(--bg-top);
+    --secondary-foreground: var(--text-main);
+    --muted: var(--bg-top);
+    --muted-foreground: var(--text-muted);
+    --accent-color: var(--accent);
+    --accent-color-foreground: var(--text-main);
+    --destructive: #ef4444; /* Keeping destructive as red */
+    --destructive-foreground: #ffffff;
+    --border: var(--card-border);
+    --input: var(--bg-top);
+    --ring: hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.2); /* green focus ring */
+    --radius: 18px;
+
+    /* optional: used in calendar-red-dates */
+    --gray-900: #020617;
+  }
+}
+
+
+/* ===== GLOBAL BASE STYLES ===== */
+@layer base {
+  * { @apply border-border; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(1200px 600px at 70% -10%, #1a2240 0%, transparent 60%),
+      linear-gradient(180deg,var(--bg-top),var(--bg-base));
+    color: var(--text-main);
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    /* IMPORTANT: no flexbox + no global padding here */
+  }
+}
+
+/* Serif display heading used for the hero title */
+.heading-display {
+  font-family: "Playfair Display", "Times New Roman", serif;
+  letter-spacing: 0.2px;
+  font-weight: 800;
+  line-height: 1.1;
+  font-size: 58px;
+}
+
+/* Make hero title responsive on small screens */
+@media (max-width: 640px) {
+  .heading-display {
+    font-size: 34px;
+  }
+}
+
+
+/* ===== COMPONENT-LEVEL STYLES ===== */
+@layer components {
+  /* Centered page shell for auth screens */
+  .auth-page { @apply min-h-screen flex items-center justify-center px-4; }
+
+  /* Glassy auth card */
+  .auth-card {
+    @apply relative w-full max-w-md mx-auto rounded-2xl border;
+    padding: 2.25rem 2.5rem 2rem;
+    border-color: var(--card-border);
+    background:
+      radial-gradient(circle at top left, hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.18), transparent 55%),
+      rgba(7, 11, 20, 0.96);
+    box-shadow:
+      0 22px 60px rgba(0, 0, 0, 0.9),
+      0 0 0 1px rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(22px);
+  }
+
+  /* Text inputs on dark background */
+  .auth-input {
+    @apply w-full rounded-xl border px-3 py-2 text-sm outline-none;
+    border-color: rgba(148, 163, 184, 0.4);
+    background: rgba(10, 17, 35, 0.95);
+    color: var(--text-main);
+  }
+  .auth-input::placeholder { color: rgba(148, 163, 184, 0.7); }
+  .auth-input:focus {
+    border-color: var(--accent);
+    box-shadow:
+      0 0 0 1px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.25),
+      0 0 24px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.35);
+    background: rgba(10, 17, 35, 1);
+  }
+
+  /* Primary rounded CTA button */
+  .auth-button-primary {
+    @apply w-full rounded-full border px-4 py-2 text-xs font-semibold tracking-[0.14em] uppercase;
+    background: radial-gradient(circle at top left, var(--accent-soft), var(--accent));
+    color: #050816;
+    border-color: var(--accent-strong);
+    box-shadow:
+      0 12px 35px rgba(0, 0, 0, 0.7),
+      0 0 18px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.8);
+    transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+  }
+  .auth-button-primary:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.07);
+    box-shadow:
+      0 16px 40px rgba(0, 0, 0, 0.85),
+      0 0 28px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.9);
+  }
+  .auth-button-primary:active {
+    transform: translateY(0);
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.8),
+      0 0 18px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.7);
+  }
+
+  .auth-link { @apply text-xs font-medium cursor-pointer; color: var(--accent); }
+  .auth-link:hover { text-decoration: underline; }
+
+  /* ===== Landing page styles ===== */
+  .shell { @apply max-w-[980px] w-full; }
+
+  .hero-landing {
+    @apply p-12 rounded-[var(--radius)] border border-[var(--card-border)] shadow-[var(--shadow)];
+    background: rgba(10,14,26,.7);
+    backdrop-filter: saturate(140%) blur(8px);
+  }
+
+  @media (max-width: 640px) {
+    .hero-landing {
+      padding: 1.5rem; /* 24px instead of 48px */
+    }
+  }
+
+  .kicker-landing { @apply flex items-center gap-3 justify-center mb-4; }
+  .dot-landing { @apply w-1.5 h-1.5 bg-[var(--accent)] rounded-full shadow-[0_0_24px_var(--accent)]; }
+  .rule-landing { @apply flex-1 h-px bg-gradient-to-r from-transparent via-[rgba(255,255,255,.15)] to-transparent; }
+
+  .sub-landing { @apply mt-3 mx-auto text-center text-lg text-[var(--text-muted)] max-w-[760px]; }
+
+  .cta-landing { @apply flex gap-4 justify-center mt-7 flex-wrap; }
+
+  /* Identical buttons; only color when selected */
+  .btn-landing {
+    @apply appearance-none border border-[rgba(255,255,255,.14)] bg-[rgba(19,26,43,.6)]
+           text-[var(--text-main)] px-5 py-3.5 rounded-[var(--radius)]
+           font-semibold tracking-[0.3px] cursor-pointer min-w-[170px]
+           transition-all duration-100 ease-in-out;
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+  .btn-landing:hover { @apply -translate-y-px; }
+  .btn-landing:focus { @apply outline-none shadow-[0_0_0_6px_var(--ring)]; }
+  .btn-landing.is-selected {
+    background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+    color: #081224;
+    border-color: transparent;
+    box-shadow: 0 10px 30px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.35), inset 0 -2px 10px rgba(0,0,0,.25);
+  }
+
+  /* Optional: the “Go” button that activates after a selection */
+  .btn-landing-go {
+    border: 1px solid transparent;
+    background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+    color: #081224;
+    border-radius: var(--radius);
+    padding: 12px 20px;
+    font-weight: 700;
+  }
+  .btn-landing-go:disabled {
+    opacity: .5;
+    background: rgba(19,26,43,.6);
+    color: var(--text-muted);
+    border: 1px solid rgba(255,255,255,.14);
+  }
+
+  .row-landing { @apply grid grid-cols-[1.1fr_0.9fr] gap-5 mt-5; }
+
+  @media (max-width:900px){
+    .row-landing { @apply grid-cols-1; }
+  }
+
+  .card-landing { @apply bg-[var(--card-bg)] border border-[rgba(255,255,255,.08)] rounded-[var(--radius)] p-5 shadow-[var(--shadow)]; }
+  .card-landing h3 { @apply m-0 text-xl tracking-[0.2px]; }
+  .card-landing p { @apply m-0 text-[var(--text-muted)]; }
+
+  .mcard-landing {
+    background: radial-gradient(600px 260px at 90% -10%, #26497c66 0%, transparent 60%), var(--card-bg);
+    @apply flex flex-col gap-3.5;
+  }
+  .meter-landing { @apply h-2.5 bg-[#0e1425] border border-[rgba(255,255,255,.07)] rounded-full overflow-hidden; }
+  .bar-landing {
+    @apply h-full w-[62%];
+    background: linear-gradient(to right, var(--accent-strong), var(--accent));
+  }
+  .tiny-landing { @apply text-sm text-[#b8c1dd]; }
+  .pill-landing { @apply inline-block px-2.5 py-1.5 rounded-full bg-[#0e1425] border border-[rgba(255,255,255,.08)] text-[#cfe0ff] font-semibold tracking-[0.2px]; }
+  .footnote-landing { @apply mt-4 text-center text-[#7f8ab0] text-sm; }
+
+  /* Custom styles for green calendar dates */
+  .calendar-red-dates .rdp-caption_label,
+  .calendar-red-dates .rdp-nav_button,
+  .calendar-red-dates .rdp-head_cell {
+    color: var(--gray-900);
+  }
+
+  .calendar-red-dates .rdp-day {
+    color: var(--accent); /* Make all day numbers green */
+  }
+
+  .calendar-red-dates .rdp-day_selected,
+  .calendar-red-dates .rdp-day_selected:hover {
+    background-color: var(--accent-strong); /* Darker green for selected date background */
+    color: white; /* White text on selected green background */
+  }
+
+  .calendar-red-dates .rdp-day_today {
+    border-color: var(--accent); /* Highlight today's date with green border */
+  }
+}

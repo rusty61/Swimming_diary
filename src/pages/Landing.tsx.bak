@@ -1,0 +1,156 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/auth/AuthContext";
+import { MoodSelector, MoodValue } from "@/components/MoodSelector";
+import { supabase } from "@/integrations/supabase/client";
+import { showError } from "@/utils/toast";
+import MotivationBoostCard from "@/components/MotivationBoostCard"; // Import MotivationBoostCard
+
+type Btn = "profile" | "diary" | "stats" | null;
+
+const Landing: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  const [selected, setSelected] = useState<Btn>(null);
+  const [mood, setMood] = useState<MoodValue | null>(null);
+  const [profileComplete, setProfileComplete] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!loading && user) {
+      const checkProfileStatus = async () => {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error("Landing: Error fetching profile:", error);
+          showError(`Error checking profile: ${error.message}`);
+          setProfileComplete(false); // Assume incomplete on error
+          return;
+        }
+        setProfileComplete(!!data);
+        if (!data) {
+          console.log("Landing: Profile not complete, redirecting to /profile-setup");
+          navigate("/profile-setup");
+        }
+      };
+      checkProfileStatus();
+    } else if (!loading && !user) {
+      navigate("/login");
+    }
+  }, [user, loading, navigate]);
+
+  const name = user?.user_metadata?.first_name || user?.email?.split('@')[0] || "Athlete";
+  const email = user?.email || "";
+  const avatar = user?.user_metadata?.avatar_url || `https://robohash.org/${encodeURIComponent(email || name)}?set=set3`;
+
+  const go = () => {
+    if (!selected) return;
+    if (selected === "profile") navigate("/profile");
+    if (selected === "diary") navigate("/diary");
+    if (selected === "stats") navigate("/stats");
+  };
+
+  if (loading || !user || !profileComplete) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-4 text-accent">Loading...</h1>
+          <p className="text-xl text-text-muted">Preparing your experience.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <main className="shell flex flex-col items-center p-4">
+      <section className="hero-landing mb-8" aria-labelledby="title">
+        <div className="kicker-landing">
+          <span className="rule-landing" />
+          <span className="dot-landing" />
+          <span className="rule-landing" />
+        </div>
+
+        <h1 id="title" className="heading-display text-center">
+  <span className="text-[color:#ffffff33]">Black Line</span> Journal
+</h1>
+
+
+        <p className="sub-landing">
+          From black line to best time. Your session history, record mood and heart rate in the morning, and
+          load trends in one place, controlled by you.
+        </p>
+
+        {/* Profile strip */}
+        <div className="mt-6 flex items-center gap-4 justify-center">
+          <img
+            src={avatar}
+            alt="User avatar"
+            className="w-14 h-14 rounded-full border border-[rgba(255,255,255,.15)]"
+          />
+          <div className="text-center sm:text-left">
+            <div className="text-base font-semibold">{name}</div>
+            {email && <div className="text-sm text-[var(--text-muted)]">{email}</div>}
+          </div>
+        </div>
+
+        {/* Spiel / how-to */}
+        <div className="row-landing">
+          <article className="card-landing">
+            <h3>How to use this</h3>
+            <p>
+              1) Before or after training, set your mood. 2) Add the session (distance, time,
+              HR if available, brief notes). 3) Each Sunday, review the weekly graph and adjust
+              next week’s targets.
+            </p>
+            <div className="mt-4">
+              <div className="text-sm mb-2 font-semibold">Today’s mood</div>
+              <MoodSelector value={mood} onChange={setMood} />
+            </div>
+          </article>
+
+          <aside className="card-landing">
+            <h3 className="mb-2">This week so far</h3>
+            <p className="m-0 text-sm">
+              Sessions: <strong>—</strong> • Distance: <strong>—</strong> • Avg mood: <strong>{mood ?? "—"}</strong>
+            </p>
+            <p className="footnote-landing">Hook this to your store to populate live totals.</p>
+          </aside>
+        </div>
+
+        {/* 3-button selector */}
+        <div className="cta-landing" role="group" aria-label="Primary actions">
+          {(["profile","diary","stats"] as Exclude<Btn,null>[]).map((id) => (
+            <Button
+              key={id}
+              variant="outline"
+              className={`btn-landing ${selected === id ? "is-selected" : ""}`}
+              aria-pressed={selected === id}
+              onClick={() => setSelected((p) => (p === id ? null : id))}
+            >
+              {id === "profile" && "EDIT DETAILS"}
+              {id === "diary"   && "OPEN DIARY"}
+              {id === "stats"   && "VIEW STATS"}
+            </Button>
+          ))}
+        </div>
+
+        <div className="cta-landing mt-3">
+          <Button className="btn-landing-go" disabled={!selected} onClick={go}>
+            {selected ? (selected === "profile" ? "Go to Profile" : selected === "diary" ? "Go to Diary" : "Go to Stats") : "Choose an action"}
+          </Button>
+        </div>
+      </section>
+      <div className="w-full max-w-2xl">
+        <MotivationBoostCard />
+      </div>
+    </main>
+  );
+};
+
+export default Landing;

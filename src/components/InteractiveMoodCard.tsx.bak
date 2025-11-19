@@ -1,0 +1,55 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MoodSelector, MoodValue } from "@/components/MoodSelector";
+import { fetchEntryForDate, upsertDailyEntry } from "@/data/dailyEntriesSupabase";
+import { format } from "date-fns";
+import { Smile } from "lucide-react";
+import { useAuth } from "@/auth/AuthContext";
+import { cn } from "@/lib/utils";
+
+interface InteractiveMoodCardProps {
+  selectedDate: Date;
+  onMoodChange: (mood: MoodValue | null) => void;
+  onSaved?: () => void; // New prop
+  className?: string;
+}
+
+const InteractiveMoodCard: React.FC<InteractiveMoodCardProps> = ({ selectedDate, onMoodChange, onSaved, className }) => {
+  const { user } = useAuth();
+  const formattedDate = format(selectedDate, "yyyy-MM-dd");
+  const [currentMood, setCurrentMood] = useState<MoodValue | null>(null);
+
+  useEffect(() => {
+    const loadMood = async () => {
+      if (!user) return;
+      const entry = await fetchEntryForDate(user.id, selectedDate);
+      setCurrentMood((entry?.mood as MoodValue) || null);
+    };
+    loadMood();
+  }, [selectedDate, user]);
+
+  const handleMoodSelect = async (mood: MoodValue | null) => {
+    if (!user) return;
+    setCurrentMood(mood);
+    onMoodChange(mood);
+    await upsertDailyEntry(user.id, { date: formattedDate, mood: mood || 0 });
+    onSaved?.(); // Call onSaved after successful upsert
+  };
+
+  return (
+    <Card className={cn("bg-card text-foreground shadow-md border-card-border", className)}>
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold flex items-center text-accent">
+          Daily Mood <Smile className="ml-2 text-accent-soft" />
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6 flex justify-center items-center h-full">
+        <MoodSelector value={currentMood} onChange={handleMoodSelect} className="scale-150" />
+      </CardContent>
+    </Card>
+  );
+};
+
+export default InteractiveMoodCard;
