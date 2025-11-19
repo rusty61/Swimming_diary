@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthContext";
@@ -51,7 +52,7 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({
   });
   const [loading, setLoading] = useState(false);
 
-  const entryDateStr = selectedDate.toISOString().slice(0, 10); // YYYY-MM-DD
+  const entryDateStr = format(selectedDate, "yyyy-MM-dd");
 
   // Load all notes for this date
   useEffect(() => {
@@ -61,6 +62,11 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({
 
     const loadNotes = async () => {
       setLoading(true);
+      setNotes({
+        insight: "",
+        nutrition: "",
+        positive: "",
+      });
 
       const { data, error } = await supabase
         .from("daily_notes")
@@ -77,18 +83,18 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({
         return;
       }
 
-      const next: Record<NoteType, string> = {
-        insight: "",
-        nutrition: "",
-        positive: "",
-      };
+        const next: Record<NoteType, string> = {
+          insight: "",
+          nutrition: "",
+          positive: "",
+        };
 
-      (data ?? []).forEach((row: any) => {
-        const t = row.note_type as NoteType;
-        if (t in next) {
-          next[t] = row.content ?? "";
-        }
-      });
+        (data ?? []).forEach((row: { note_type: NoteType; content: string | null }) => {
+          const t = row.note_type;
+          if (t in next) {
+            next[t] = row.content ?? "";
+          }
+        });
 
       setNotes(next);
       setLoading(false);

@@ -130,8 +130,12 @@ export default function ProfileSetup() {
       showSuccess("Profile updated successfully!");
       console.log("Profile setup complete, navigating to dashboard.");
       navigate("/dashboard");
-    } catch (error: any) {
-      showError(`Error updating profile: ${error.message}`);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred while updating the profile.";
+      showError(`Error updating profile: ${message}`);
       console.error("Profile update error caught:", error);
     }
   }
