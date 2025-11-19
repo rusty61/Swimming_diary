@@ -1,175 +1,253 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import React, { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/auth/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
-
-type NoteType = "insight" | "nutrition" | "positive";
-
-const NOTE_CONFIG: Record<
-  NoteType,
-  { label: string; question: string; placeholder: string }
-> = {
-  insight: {
-    label: "Technique & Physical Insight",
-    question:
-      "What new insight did I gain about my technique or physical capabilities?",
-    placeholder: "Jot down your thoughts...",
-  },
-  nutrition: {
-    label: "Nutrition & Hydration",
-    question:
-      "How did my nutrition and hydration today affect my performance or recovery?",
-    placeholder: "What did I eat/drink before, during, and after training?",
-  },
-  positive: {
-    label: "Something Positive About Today",
-    question:
-      "What is one positive thing from today that I’m proud of or grateful for?",
-    placeholder: "Big or small, what went well?",
-  },
-};
+import { showError, showSuccess } from "@/utils/toast";
 
 type DailyNotesCardProps = {
   selectedDate: Date;
-  onSaved?: () => void;
-  className?: string;
 };
 
-const DailyNotesCard: React.FC<DailyNotesCardProps> = ({
-  selectedDate,
-  onSaved,
-  className,
-}) => {
+type NotesState = {
+  insight: string;
+  nutrition: string;
+  positive: string;
+};
+
+type DailyNoteRow = {
+  id?: string;
+  user_id: string;
+  entry_date: string; // yyyy-MM-dd
+  note_type: string;
+  content: string;
+};
+
+const NOTE_TYPES = {
+  insight: "insight",
+  nutrition: "nutrition",
+  positive: "positive",
+} as const;
+
+const emptyNotes: NotesState = {
+  insight: "",
+  nutrition: "",
+  positive: "",
+};
+
+const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
   const { user } = useAuth();
-  const [notes, setNotes] = useState<Record<NoteType, string>>({
-    insight: "",
-    nutrition: "",
-    positive: "",
-  });
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  // Use an ISO-derived key so reads/writes match existing Supabase rows that were
-  // created with UTC date strings (avoids timezone drift vs. local formatting).
-  const entryDateStr = selectedDate.toISOString().slice(0, 10);
+  const [notes, setNotes] = useState<NotesState>(emptyNotes);
 
-  // Load all notes for this date
-  useEffect(() => {
-    if (!user) return;
+  const entryDateStr = useMemo(
+    () => format(selectedDate, "yyyy-MM-dd"),
+    [selectedDate]
+  );
 
-    let cancelled = false;
+  // ───────────────── LOAD EXISTING NOTES FOR USER + DATE ─────────────────
 
-    const loadNotes = async () => {
-      setLoading(true);
-      setNotes({
-        insight: "",
-        nutrition: "",
-        positive: "",
-      });
+  const {
+    data: rows,
+    isLoading,
+    isFetching,
+  } = useQuery<DailyNoteRow[] | null>({
+    queryKey: ["daily-notes", user?.id, entryDateStr],
+    enabled: !!user && !!entryDateStr,
+    queryFn: async () => {
+      if (!user) return null;
 
       const { data, error } = await supabase
         .from("daily_notes")
-        .select("note_type, content")
+        .select("id, user_id, entry_date, note_type, content")
         .eq("user_id", user.id)
-        .eq("entry_date", entryDateStr)
-        .in("note_type", ["insight", "nutrition", "positive"]);
-
-      if (cancelled) return;
+        .eq("entry_date", entryDateStr);
 
       if (error) {
-        console.error("Error loading notes", error);
-        setLoading(false);
-        return;
+        console.error("Error loading daily notes:", error);
+        throw error;
       }
 
-      const next: Record<NoteType, string> = {
-        insight: "",
-        nutrition: "",
-        positive: "",
-      };
+      return data ?? [];
+    },
+  });
 
-      (data ?? []).forEach((row: { note_type: NoteType; content: string | null }) => {
-        const t = row.note_type;
-        if (t in next) {
-          next[t] = row.content ?? "";
-        }
+  // When query result or date changes, push into local state
+  useEffect(() => {
+    if (!rows || rows.length === 0) {
+      setNotes(emptyNotes);
+      return;
+    }
+
+    const next: NotesState = { ...emptyNotes };
+
+    for (const row of rows) {
+      switch (row.note_type) {
+        case NOTE_TYPES.insight:
+          next.insight = row.content ?? "";
+          break;
+        case NOTE_TYPES.nutrition:
+          next.nutrition = row.content ?? "";
+          break;
+        case NOTE_TYPES.positive:
+          next.positive = row.content ?? "";
+          break;
+        default:
+        // ignore unknown types for now
+      }
+    }
+
+    setNotes(next);
+  }, [rows, entryDateStr]);
+
+  // ───────────────── SAVE / UPSERT NOTES ─────────────────
+
+  const saveMutation = useMutation({
+    mutationFn: async (payload: DailyNoteRow[]) => {
+      const { error } = await supabase
+        .from("daily_notes")
+        .upsert(payload, {
+          // This matches your unique index (user_id, entry_date, note_type)
+          onConflict: "user_id,entry_date,note_type",
+        });
+
+      if (error) {
+        console.error("Error saving daily notes:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["daily-notes", user?.id, entryDateStr],
       });
+      showSuccess("Daily notes saved");
+    },
+    onError: (err: any) => {
+      console.error("Daily notes save error:", err);
+      showError("Could not save notes. Check console for details.");
+    },
+  });
 
-      setNotes(next);
-      setLoading(false);
-    };
+  const handleSave = () => {
+    if (!user) {
+      showError("You must be logged in to save notes.");
+      return;
+    }
 
-    loadNotes();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user, entryDateStr]);
-
-  const handleChange = (type: NoteType, value: string) => {
-    setNotes((prev) => ({ ...prev, [type]: value }));
-  };
-
-  const saveOne = async (type: NoteType) => {
-    if (!user) return;
-
-    const content = notes[type] ?? "";
-
-    const { error } = await supabase.from("daily_notes").upsert(
+    const payload: DailyNoteRow[] = [
       {
         user_id: user.id,
         entry_date: entryDateStr,
-        note_type: type,
-        content,
+        note_type: NOTE_TYPES.insight,
+        content: notes.insight.trim(),
       },
-      { onConflict: "user_id,entry_date,note_type" },
-    );
+      {
+        user_id: user.id,
+        entry_date: entryDateStr,
+        note_type: NOTE_TYPES.nutrition,
+        content: notes.nutrition.trim(),
+      },
+      {
+        user_id: user.id,
+        entry_date: entryDateStr,
+        note_type: NOTE_TYPES.positive,
+        content: notes.positive.trim(),
+      },
+    ];
 
-    if (error) {
-      console.error("Error saving note", type, error);
-    } else if (onSaved) {
-      onSaved();
-    }
+    saveMutation.mutate(payload);
   };
 
-  const formattedDate = selectedDate.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const handleChange =
+    (field: keyof NotesState) =>
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setNotes((prev) => ({ ...prev, [field]: e.target.value }));
+    };
+
+  const saving = saveMutation.isPending;
+  const loading = isLoading || isFetching;
 
   return (
-    <Card className={cn("bg-card border-card-border shadow-md", className)}>
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold text-accent">
-          Daily Notes for {formattedDate}
-        </CardTitle>
-      </CardHeader>
+    <section className="mt-8 w-full rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-md">
+      <div className="mb-4 flex items-baseline justify-between gap-4">
+        <h2 className="text-lg font-semibold text-[var(--accent-soft)]">
+          Daily Notes for {format(selectedDate, "d MMMM yyyy")}
+        </h2>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={saving || loading}
+          className="min-w-[120px]"
+        >
+          {saving ? "Saving..." : "Save Notes"}
+        </Button>
+      </div>
 
-      <CardContent className="space-y-6">
-        {(Object.keys(NOTE_CONFIG) as NoteType[]).map((type) => {
-          const cfg = NOTE_CONFIG[type];
-          return (
-            <div key={type} className="space-y-2">
-              <p className="text-base font-semibold text-foreground">
-                {cfg.label}
-              </p>
-              <p className="text-sm text-muted-foreground">{cfg.question}</p>
-              <textarea
-                value={notes[type]}
-                onChange={(e) => handleChange(type, e.target.value)}
-                onBlur={() => saveOne(type)}
-                placeholder={cfg.placeholder}
-                className="w-full min-h-[110px] rounded-lg border border-border bg-input p-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent-soft"
-                disabled={loading}
-              />
-            </div>
-          );
-        })}
-      </CardContent>
-    </Card>
+      {loading && (
+        <p className="mb-4 text-sm text-[var(--text-muted)]">Loading notes…</p>
+      )}
+
+      <div className="space-y-6">
+        {/* Technique & Physical Insight */}
+        <div>
+          <h3 className="text-sm font-semibold tracking-wide text-[var(--text-main)]">
+            Technique &amp; Physical Insight
+          </h3>
+          <p className="mb-2 text-xs text-[var(--text-muted)]">
+            What new insight did I gain about my technique or physical
+            capabilities?
+          </p>
+          <Textarea
+            rows={3}
+            value={notes.insight}
+            onChange={handleChange("insight")}
+            className="min-h-[80px] resize-vertical bg-transparent text-[var(--text-main)]"
+            placeholder="e.g. Felt the catch better on my right arm, stayed longer in streamline off each wall…"
+          />
+        </div>
+
+        {/* Nutrition & Hydration */}
+        <div>
+          <h3 className="text-sm font-semibold tracking-wide text-[var(--text-main)]">
+            Nutrition &amp; Hydration
+          </h3>
+          <p className="mb-2 text-xs text-[var(--text-muted)]">
+            How did my nutrition and hydration today affect my performance or
+            recovery?
+          </p>
+          <Textarea
+            rows={3}
+            value={notes.nutrition}
+            onChange={handleChange("nutrition")}
+            className="min-h-[80px] resize-vertical bg-transparent text-[var(--text-main)]"
+            placeholder="e.g. Breakfast sat well, forgot post-session carbs, cramped last 400…"
+          />
+        </div>
+
+        {/* Something Positive About Today */}
+        <div>
+          <h3 className="text-sm font-semibold tracking-wide text-[var(--text-main)]">
+            Something Positive About Today
+          </h3>
+          <p className="mb-2 text-xs text-[var(--text-muted)]">
+            What is one thing I’m proud of or grateful for from today’s
+            training or life?
+          </p>
+          <Textarea
+            rows={3}
+            value={notes.positive}
+            onChange={handleChange("positive")}
+            className="min-h-[80px] resize-vertical bg-transparent text-[var(--text-main)]"
+            placeholder="e.g. Held my pace on last reps, coach feedback, teammate support…"
+          />
+        </div>
+      </div>
+    </section>
   );
 };
 
