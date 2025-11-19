@@ -53,10 +53,12 @@ const DiaryPage = () => {
       await signOut();
       showSuccess("You have been logged out.");
       navigate("/login");
-    } catch (error: any) {
-      showError(
-        `An unexpected error occurred during logout: ${error.message}`,
-      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred during logout.";
+      showError(`An unexpected error occurred during logout: ${message}`);
       console.error("Unexpected logout error:", error);
     }
   };

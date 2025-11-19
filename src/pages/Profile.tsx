@@ -177,8 +177,12 @@ const Profile = () => {
       showSuccess("Profile updated successfully!");
       console.log("Profile update complete, navigating to landing page.");
       navigate("/"); // Redirect to the landing page
-    } catch (error: any) {
-      showError(`Error updating profile: ${error.message}`);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred while updating the profile.";
+      showError(`Error updating profile: ${message}`);
       console.error("Profile update error caught:", error);
     }
   }

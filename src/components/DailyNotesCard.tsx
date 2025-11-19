@@ -51,7 +51,9 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({
   });
   const [loading, setLoading] = useState(false);
 
-  const entryDateStr = selectedDate.toISOString().slice(0, 10); // YYYY-MM-DD
+  // Use an ISO-derived key so reads/writes match existing Supabase rows that were
+  // created with UTC date strings (avoids timezone drift vs. local formatting).
+  const entryDateStr = selectedDate.toISOString().slice(0, 10);
 
   // Load all notes for this date
   useEffect(() => {
@@ -61,6 +63,11 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({
 
     const loadNotes = async () => {
       setLoading(true);
+      setNotes({
+        insight: "",
+        nutrition: "",
+        positive: "",
+      });
 
       const { data, error } = await supabase
         .from("daily_notes")
@@ -83,8 +90,8 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({
         positive: "",
       };
 
-      (data ?? []).forEach((row: any) => {
-        const t = row.note_type as NoteType;
+      (data ?? []).forEach((row: { note_type: NoteType; content: string | null }) => {
+        const t = row.note_type;
         if (t in next) {
           next[t] = row.content ?? "";
         }

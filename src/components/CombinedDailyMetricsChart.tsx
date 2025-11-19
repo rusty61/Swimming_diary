@@ -29,6 +29,13 @@ interface CombinedDailyMetricsChartProps {
   className?: string;
 }
 
+type ChartDatum = {
+  name: string;
+  mood: number;
+  heartRate: number | null;
+  trainingVolume: number | null;
+};
+
 const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
   selectedDate,
   rangeDays,
@@ -37,7 +44,7 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
   className,
 }) => {
   const { user } = useAuth();
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<ChartDatum[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

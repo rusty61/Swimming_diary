@@ -2,10 +2,10 @@ import { format, parseISO, isValid } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
 export type DailyEntry = {
-  id?: string;                  // Supabase row id
-  userId: string;               // auth.users.id
-  date: string;                 // "YYYY-MM-DD"
-  mood: number;                 // 0..5
+  id?: string; // Supabase row id
+  userId: string; // auth.users.id
+  date: string; // "YYYY-MM-DD"
+  mood: number; // 0..5
   heartRate: number | null;
   trainingVolume: number | null;
   notes: string;
@@ -14,10 +14,23 @@ export type DailyEntry = {
   updatedAt?: string;
 };
 
+type DailyEntryRow = {
+  id?: string;
+  user_id: string;
+  date: string;
+  mood?: number | null;
+  heart_rate?: number | null;
+  training_volume?: number | null;
+  notes?: string | null;
+  period_symptoms?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 /**
  * Normalize a raw row from Supabase into our DailyEntry shape.
  */
-const mapRowToDailyEntry = (row: any): DailyEntry => ({
+const mapRowToDailyEntry = (row: DailyEntryRow): DailyEntry => ({
   id: row.id,
   userId: row.user_id,
   date: row.date,
