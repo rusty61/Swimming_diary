@@ -41,21 +41,28 @@ const SessionLogPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative">
-      <div className="max-w-7xl mx-auto py-8 z-10 relative">
-        {/* Page title */}
-        <div className="mb-4 flex justify-center">
-          <h1 className="text-3xl sm:text-4xl font-semibold text-text-main">
-            Session Log
-          </h1>
-        </div>
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* ===== Top header ===== */}
+        <header className="mb-8 space-y-3">
+          {/* Row 1: page title + logout */}
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-3xl sm:text-4xl font-semibold text-text-main">
+              Session Log
+            </h1>
+            <Button
+              onClick={handleLogout}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-4 py-2 rounded-md"
+            >
+              Logout
+            </Button>
+          </div>
 
-        <main className="max-w-5xl mx-auto px-4 pb-24">
-          {/* Header row: title + date + update + logout */}
-          <div className="mt-2 mb-4 grid grid-cols-1 gap-4 md:grid-cols-4 items-center">
-            {/* 1. Heading + Review Notes */}
-            <div className="flex items-center justify-start gap-3">
-              <h2 className="text-2xl sm:text-3xl font-semibold text-text-main">
+          {/* Row 2: training entry + review notes + date + update */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            {/* Left side: Training Entry + Review Notes */}
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-xl sm:text-2xl font-semibold text-text-main">
                 Training Entry
               </h2>
               <Button
@@ -68,59 +75,42 @@ const SessionLogPage: React.FC = () => {
               </Button>
             </div>
 
-            {/* 2. Date picker */}
-            <div className="flex justify-center">
+            {/* Right side: Date + Update */}
+            <div className="flex flex-wrap items-center gap-3 justify-start md:justify-end">
               <DatePicker
                 selectedDate={selectedDate}
                 onDateChange={setSelectedDate}
               />
-            </div>
-
-            {/* 3. Update (desktop/tablet only) */}
-            <div className="hidden md:flex justify-center">
               <button
                 onClick={applyDateSelection}
-                className="px-8 py-3 text-sm font-semibold tracking-[0.14em] uppercase bg-primary text-primary-foreground border border-accent-strong shadow-[0_14px_35px_rgba(0,0,0,0.7)] hover:bg-accent-strong transition"
+                className="px-6 py-2 text-xs sm:text-sm font-semibold tracking-[0.14em] uppercase bg-primary text-primary-foreground border border-accent-strong shadow-[0_10px_25px_rgba(0,0,0,0.6)] hover:bg-accent-strong transition rounded-md"
               >
                 Update
               </button>
             </div>
-
-            {/* 4. Logout */}
-            <div className="flex justify-end">
-              <Button
-                onClick={handleLogout}
-                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-4 py-2 rounded-md"
-              >
-                Logout
-              </Button>
-            </div>
           </div>
+        </header>
 
-          {/* Training volume + notes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-stretch">
+        {/* ===== Main content: distance + notes ===== */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          {/* Training Distance card */}
+          <div className="h-full">
             <TrainingVolumeCard
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
-              className="h-full"
+              className="h-full min-h-[260px]"
             />
+          </div>
+
+          {/* Notes card */}
+          <div className="h-full">
             <DailyNotesCard
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
-              className="h-full"
+              className="h-full min-h-[260px]"
             />
           </div>
-        </main>
-
-        {/* Mobile sticky Update button */}
-        <div className="fixed inset-x-0 bottom-16 z-30 px-4 md:hidden">
-          <button
-            onClick={applyDateSelection}
-            className="w-full px-8 py-3 text-sm font-semibold tracking-[0.14em] uppercase bg-primary text-primary-foreground border border-accent-strong shadow-[0_14px_35px_rgba(0,0,0,0.7)] hover:bg-accent-strong transition rounded-md"
-          >
-            Update
-          </button>
-        </div>
+        </section>
       </div>
     </div>
   );
