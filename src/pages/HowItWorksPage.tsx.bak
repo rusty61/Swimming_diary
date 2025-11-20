@@ -15,7 +15,7 @@ const HowItWorksPage: React.FC = () => {
         <header className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl sm:text-4xl font-semibold text-text-main">
-              How Mood Swimmer Works
+              How Black Line Works
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Quick guide to using the diary, session log, and stats without getting lost in screens.
