@@ -15,15 +15,16 @@ import { AuthProvider } from "./auth/AuthContext";
 import { AuthGate } from "./components/Auth/AuthGate";
 import { LoginForm } from "./components/Auth/LoginForm";
 
-import Stats from "./pages/Stats"; // Full stats page (heavy dashboard)
-import StatsTrendPage from "./pages/StatsTrendPage"; // Graph-only page
-import Profile from "./pages/Profile"; // Edit profile
-import NotesArchivePage from "./pages/NotesArchivePage"; // Notes archive
+import Stats from "./pages/Stats";
+import StatsTrendPage from "./pages/StatsTrendPage";
+import Profile from "./pages/Profile";
+import NotesArchivePage from "./pages/NotesArchivePage";
 
 import MorningCheckinPage from "./pages/MorningCheckinPage";
 import SessionLogPage from "./pages/SessionLogPage";
-import SavedEntriesPage from "./pages/SavedEntriesPage"; // NEW
-import StatsGalleryPage from "./pages/StatsGalleryPage"; // Gallery
+import SavedEntriesPage from "./pages/SavedEntriesPage";
+import StatsGalleryPage from "./pages/StatsGalleryPage";
+import HowItWorksPage from "./pages/HowItWorksPage";
 
 import { AppShell } from "./components/layout/AppShell";
 
@@ -57,7 +58,7 @@ const App: React.FC = () => (
               {/* Legacy diary alias -> Morning Check-in */}
               <Route path="/diary" element={<MorningCheckinPage />} />
 
-              {/* Stats: light gallery first, then deeper pages */}
+              {/* Stats: gallery first, then deeper pages */}
               <Route path="/stats" element={<StatsGalleryPage />} />
               <Route path="/stats/trend" element={<StatsTrendPage />} />
               <Route path="/stats/full" element={<Stats />} />
@@ -68,6 +69,9 @@ const App: React.FC = () => (
 
               {/* Notes archive */}
               <Route path="/notes" element={<NotesArchivePage />} />
+
+              {/* Help / How it works */}
+              <Route path="/help" element={<HowItWorksPage />} />
             </Route>
           </Route>
 
