@@ -22,9 +22,10 @@ import NotesArchivePage from "./pages/NotesArchivePage"; // Notes archive
 
 import MorningCheckinPage from "./pages/MorningCheckinPage";
 import SessionLogPage from "./pages/SessionLogPage";
+import SavedEntriesPage from "./pages/SavedEntriesPage"; // NEW
+import StatsGalleryPage from "./pages/StatsGalleryPage"; // Gallery
 
 import { AppShell } from "./components/layout/AppShell";
-import StatsGalleryPage from "./pages/StatsGalleryPage"; // NEW: gallery
 
 const queryClient = new QueryClient();
 
@@ -49,8 +50,9 @@ const App: React.FC = () => (
               {/* Today = Morning Check-in */}
               <Route path="/today" element={<MorningCheckinPage />} />
 
-              {/* Log = Session log */}
+              {/* Log = Session log + history */}
               <Route path="/log" element={<SessionLogPage />} />
+              <Route path="/log/history" element={<SavedEntriesPage />} />
 
               {/* Legacy diary alias -> Morning Check-in */}
               <Route path="/diary" element={<MorningCheckinPage />} />

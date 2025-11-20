@@ -15,17 +15,16 @@ import { AuthProvider } from "./auth/AuthContext";
 import { AuthGate } from "./components/Auth/AuthGate";
 import { LoginForm } from "./components/Auth/LoginForm";
 
-import Stats from "./pages/Stats"; // Full stats page
+import Stats from "./pages/Stats"; // Full stats page (heavy dashboard)
 import StatsTrendPage from "./pages/StatsTrendPage"; // Graph-only page
 import Profile from "./pages/Profile"; // Edit profile
 import NotesArchivePage from "./pages/NotesArchivePage"; // Notes archive
 
-// NEW: Morning / Session pages
 import MorningCheckinPage from "./pages/MorningCheckinPage";
 import SessionLogPage from "./pages/SessionLogPage";
 
-// Layout wrapper for authenticated app (bottom nav etc.)
 import { AppShell } from "./components/layout/AppShell";
+import StatsGalleryPage from "./pages/StatsGalleryPage"; // NEW: gallery
 
 const queryClient = new QueryClient();
 
@@ -42,7 +41,7 @@ const App: React.FC = () => (
 
           {/* ---------- Authenticated app ---------- */}
           <Route element={<AuthGate />}>
-            {/* AppShell wraps all in-app pages (Today, Log, Stats, Profile, etc.) */}
+            {/* AppShell wraps all in-app pages (bottom nav, etc.) */}
             <Route element={<AppShell />}>
               {/* Initial entry point after login/auth check */}
               <Route path="/" element={<Index />} />
@@ -56,9 +55,10 @@ const App: React.FC = () => (
               {/* Legacy diary alias -> Morning Check-in */}
               <Route path="/diary" element={<MorningCheckinPage />} />
 
-              {/* Stats */}
-              <Route path="/stats" element={<Stats />} />
+              {/* Stats: light gallery first, then deeper pages */}
+              <Route path="/stats" element={<StatsGalleryPage />} />
               <Route path="/stats/trend" element={<StatsTrendPage />} />
+              <Route path="/stats/full" element={<Stats />} />
 
               {/* Profile / setup */}
               <Route path="/profile" element={<Profile />} />
