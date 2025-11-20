@@ -18,6 +18,9 @@ import Stats from "./pages/Stats";
 import Profile from "./pages/Profile";
 import StatsTrendPage from "./pages/StatsTrendPage"; // NEW: metrics trend page
 
+import NotesArchivePage from "./pages/NotesArchivePage";
+
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -44,6 +47,8 @@ const App = () => (
             <Route path="/stats" element={<Stats />} /> {/* Full stats page */}
             <Route path="/stats/trend" element={<StatsTrendPage />} /> {/* Graph-only page */}
             <Route path="/profile" element={<Profile />} /> {/* Edit profile */}
+			<Route path="/notes" element={<NotesArchivePage />} />
+
           </Route>
 
           {/* Catch-all */}

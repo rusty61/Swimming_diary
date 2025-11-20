@@ -19,6 +19,12 @@ import Profile from "./pages/Profile";
 import StatsTrendPage from "./pages/StatsTrendPage"; // NEW: metrics trend page
 
 import NotesArchivePage from "./pages/NotesArchivePage";
+...
+<Routes>
+  ...
+  <Route path="/notes" element={<NotesArchivePage />} />
+</Routes>
+
 
 
 const queryClient = new QueryClient();
