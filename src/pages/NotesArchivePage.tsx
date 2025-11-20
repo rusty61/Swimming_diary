@@ -1,122 +1,195 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/auth/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
+import { showError } from "@/utils/toast";
 
-type NoteRow = {
+type DailyNoteRow = {
   id: string;
-  entry_date: string; // YYYY-MM-DD
+  user_id: string;
+  entry_date: string; // yyyy-MM-dd from Supabase
   note_type: string;
   content: string;
 };
 
-const NOTE_LABELS: Record<string, string> = {
-  insight: "Technique & Physical Insight",
-  nutrition: "Nutrition & Hydration",
-  positive: "Something Positive About Today",
+type GroupedNotes = {
+  entryDate: Date;
+  entryDateStr: string;
+  insight?: string;
+  nutrition?: string;
+  positive?: string;
 };
 
 const NotesArchivePage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const { data, isLoading, error } = useQuery({
+  const {
+    data: rows,
+    isLoading,
+    isError,
+    error,
+  } = useQuery<DailyNoteRow[] | null>({
     queryKey: ["daily-notes-archive", user?.id],
     enabled: !!user,
-    queryFn: async (): Promise<NoteRow[]> => {
-      if (!user) return [];
+    queryFn: async () => {
+      if (!user) return null;
+
       const { data, error } = await supabase
         .from("daily_notes")
-        .select("id, entry_date, note_type, content")
+        .select("id, user_id, entry_date, note_type, content")
         .eq("user_id", user.id)
-        .in("note_type", ["insight", "nutrition", "positive"])
-        .order("entry_date", { ascending: false })
-        .order("note_type", { ascending: true });
+        .order("entry_date", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error loading notes archive:", error);
+        showError("Could not load notes archive.");
+        throw error;
+      }
+
       return data ?? [];
     },
   });
 
-  // Group by date
-  const groupedByDate = React.useMemo(() => {
-    const grouped: Record<string, NoteRow[]> = {};
-    (data ?? []).forEach((row) => {
-      if (!grouped[row.entry_date]) grouped[row.entry_date] = [];
-      grouped[row.entry_date].push(row);
-    });
-    return grouped;
-  }, [data]);
+  const grouped = useMemo<GroupedNotes[]>(() => {
+    if (!rows || rows.length === 0) return [];
 
-  const sortedDates = Object.keys(groupedByDate).sort(
-    (a, b) => new Date(b).getTime() - new Date(a).getTime(),
-  );
+    const map = new Map<string, GroupedNotes>();
+
+    for (const row of rows) {
+      const key = row.entry_date;
+      let existing = map.get(key);
+      if (!existing) {
+        const d = new Date(row.entry_date);
+        existing = {
+          entryDate: d,
+          entryDateStr: row.entry_date,
+        };
+        map.set(key, existing);
+      }
+
+      const content = row.content ?? "";
+      switch (row.note_type) {
+        case "insight":
+          existing.insight = content;
+          break;
+        case "nutrition":
+          existing.nutrition = content;
+          break;
+        case "positive":
+          existing.positive = content;
+          break;
+        default:
+          // ignore unknown types for now
+          break;
+      }
+    }
+
+    // Sort newest → oldest
+    return Array.from(map.values()).sort(
+      (a, b) => b.entryDate.getTime() - a.entryDate.getTime(),
+    );
+  }, [rows]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">
+          Please log in to view your notes archive.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <h1 className="text-3xl md:text-4xl font-semibold text-text-main">
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Header row */}
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-3xl font-semibold text-text-main">
             Notes Archive
           </h1>
-          <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="px-4"
+          >
             Back
           </Button>
         </div>
 
-        {isLoading && <p className="text-muted-foreground">Loading notes…</p>}
-        {error && (
-          <p className="text-destructive">
-            Error loading notes. Check console for details.
+        {isLoading && (
+          <p className="text-sm text-muted-foreground">Loading notes…</p>
+        )}
+
+        {isError && (
+          <p className="text-sm text-destructive">
+            Error loading notes:{" "}
+            {error instanceof Error ? error.message : "Unknown error"}
           </p>
         )}
 
-        {!isLoading && !error && sortedDates.length === 0 && (
-          <p className="text-muted-foreground">
-            No notes yet. Start writing in your Daily Entry and they’ll appear
-            here.
+        {!isLoading && grouped.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            No notes saved yet. Start writing in your daily diary!
           </p>
         )}
 
         <div className="space-y-6">
-          {sortedDates.map((date) => {
-            const rows = groupedByDate[date];
-            const prettyDate = new Date(date).toLocaleDateString(undefined, {
-              weekday: "short",
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            });
+          {grouped.map((day) => (
+            <article
+              key={day.entryDateStr}
+              className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] px-6 py-5 shadow-md"
+            >
+              {/* Date header */}
+              <header className="mb-3">
+                <h2 className="text-base font-semibold text-[var(--accent-soft)]">
+                  {format(day.entryDate, "EEE, d MMM yyyy")}
+                </h2>
+              </header>
 
-            return (
-              <div
-                key={date}
-                className="rounded-xl border border-border bg-card/70 px-4 py-3"
-              >
-                <div className="mb-3 text-sm font-semibold text-accent">
-                  {prettyDate}
+              <div className="space-y-2 text-sm">
+                <div>
+                  <div className="font-semibold tracking-wide text-xs text-text-main">
+                    TECHNIQUE &amp; PHYSICAL INSIGHT
+                  </div>
+                  <div className="text-[13px] text-text-main">
+                    {day.insight && day.insight.trim().length > 0
+                      ? day.insight
+                      : "—"}
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  {rows.map((row) => (
-                    <div key={row.id} className="space-y-1">
-                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                        {NOTE_LABELS[row.note_type] ?? row.note_type}
-                      </div>
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {row.content}
-                      </p>
-                    </div>
-                  ))}
+                <div>
+                  <div className="font-semibold tracking-wide text-xs text-text-main">
+                    NUTRITION &amp; HYDRATION
+                  </div>
+                  <div className="text-[13px] text-text-main">
+                    {day.nutrition && day.nutrition.trim().length > 0
+                      ? day.nutrition
+                      : "—"}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="font-semibold tracking-wide text-xs text-text-main">
+                    SOMETHING POSITIVE ABOUT TODAY
+                  </div>
+                  <div className="text-[13px] text-text-main">
+                    {day.positive && day.positive.trim().length > 0
+                      ? day.positive
+                      : "—"}
+                  </div>
                 </div>
               </div>
-            );
-          })}
+            </article>
+          ))}
         </div>
       </div>
     </div>
