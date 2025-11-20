@@ -11,6 +11,8 @@ import { showError, showSuccess } from "@/utils/toast";
 
 type DailyNotesCardProps = {
   selectedDate: Date;
+  onSaved?: () => void;
+  className?: string;
 };
 
 type NotesState = {
@@ -39,7 +41,11 @@ const emptyNotes: NotesState = {
   positive: "",
 };
 
-const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
+const DailyNotesCard: React.FC<DailyNotesCardProps> = ({
+  selectedDate,
+  onSaved,
+  className,
+}) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -77,7 +83,6 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
     },
   });
 
-  // When query result or date changes, push into local state
   useEffect(() => {
     if (!rows || rows.length === 0) {
       setNotes(emptyNotes);
@@ -98,7 +103,7 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
           next.positive = row.content ?? "";
           break;
         default:
-        // ignore unknown types for now
+          break;
       }
     }
 
@@ -112,7 +117,6 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
       const { error } = await supabase
         .from("daily_notes")
         .upsert(payload, {
-          // This matches your unique index (user_id, entry_date, note_type)
           onConflict: "user_id,entry_date,note_type",
         });
 
@@ -125,6 +129,7 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
       queryClient.invalidateQueries({
         queryKey: ["daily-notes", user?.id, entryDateStr],
       });
+      if (onSaved) onSaved();
       showSuccess("Daily notes saved");
     },
     onError: (err: any) => {
@@ -173,23 +178,30 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
   const loading = isLoading || isFetching;
 
   return (
-    <section className="mt-8 w-full rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-md">
+    <section
+      className={`mt-8 w-full rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-md ${
+        className ?? ""
+      }`}
+    >
       <div className="mb-4 flex items-baseline justify-between gap-4">
         <h2 className="text-lg font-semibold text-[var(--accent-soft)]">
           Daily Notes for {format(selectedDate, "d MMMM yyyy")}
         </h2>
         <Button
           size="sm"
+          variant="outline"
           onClick={handleSave}
           disabled={saving || loading}
-          className="min-w-[120px]"
+          className="min-w-[120px] border-[var(--accent-soft)] text-[var(--accent-soft)] hover:bg-[var(--accent-soft)]/10"
         >
           {saving ? "Saving..." : "Save Notes"}
         </Button>
       </div>
 
       {loading && (
-        <p className="mb-4 text-sm text-[var(--text-muted)]">Loading notes…</p>
+        <p className="mb-4 text-sm text-[var(--text-muted)]">
+          Loading notes…
+        </p>
       )}
 
       <div className="space-y-6">
