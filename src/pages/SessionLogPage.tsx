@@ -44,7 +44,7 @@ const SessionLogPage: React.FC = () => {
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* ===== Top header ===== */}
-        <header className="mb-8 space-y-3">
+        <header className="mb-8 space-y-4">
           {/* Row 1: page title + logout */}
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-3xl sm:text-4xl font-semibold text-text-main">
@@ -58,32 +58,32 @@ const SessionLogPage: React.FC = () => {
             </Button>
           </div>
 
-          {/* Row 2: training entry + buttons + date + update */}
+          {/* Row 2: Training Entry heading */}
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-xl sm:text-2xl font-semibold text-text-main">
+              Training Entry
+            </h2>
+          </div>
+
+          {/* Row 3: buttons + date + update all aligned */}
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            {/* Left side: Training Entry + actions */}
+            {/* Left: History + Review Notes – aligned with UPDATE */}
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-xl sm:text-2xl font-semibold text-text-main">
-                Training Entry
-              </h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/notes")}
-                className="text-xs"
-              >
-                Review Notes
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={() => navigate("/log/history")}
-                className="text-xs"
+                className="px-5 py-2 text-xs sm:text-sm font-semibold tracking-[0.14em] uppercase border border-accent-strong rounded-full bg-transparent text-primary-foreground hover:bg-accent-strong/10 transition"
               >
                 History
-              </Button>
+              </button>
+              <button
+                onClick={() => navigate("/notes")}
+                className="px-5 py-2 text-xs sm:text-sm font-semibold tracking-[0.14em] uppercase border border-accent-strong rounded-full bg-transparent text-primary-foreground hover:bg-accent-strong/10 transition"
+              >
+                Review Notes
+              </button>
             </div>
 
-            {/* Right side: Date + Update */}
+            {/* Right: Date + UPDATE */}
             <div className="flex flex-wrap items-center gap-3 justify-start md:justify-end">
               <DatePicker
                 selectedDate={selectedDate}
@@ -91,7 +91,7 @@ const SessionLogPage: React.FC = () => {
               />
               <button
                 onClick={applyDateSelection}
-                className="px-6 py-2 text-xs sm:text-sm font-semibold tracking-[0.14em] uppercase bg-primary text-primary-foreground border border-accent-strong shadow-[0_10px_25px_rgba(0,0,0,0.6)] hover:bg-accent-strong transition rounded-md"
+                className="px-6 py-2 text-xs sm:text-sm font-semibold tracking-[0.14em] uppercase bg-transparent text-primary-foreground border border-accent-strong shadow-[0_10px_25px_rgba(0,0,0,0.6)] hover:bg-accent-strong/20 transition rounded-full"
               >
                 Update
               </button>

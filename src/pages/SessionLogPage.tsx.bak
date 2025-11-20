@@ -15,7 +15,7 @@ const SessionLogPage: React.FC = () => {
   const { signOut } = useAuth();
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [dataVersion, setDataVersion] = useState(0); // reserved if you later want per-day refresh
+  const [dataVersion, setDataVersion] = useState(0);
 
   const applyDateSelection = () => {
     setDataVersion((v) => v + 1);
@@ -58,9 +58,9 @@ const SessionLogPage: React.FC = () => {
             </Button>
           </div>
 
-          {/* Row 2: training entry + review notes + date + update */}
+          {/* Row 2: training entry + buttons + date + update */}
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            {/* Left side: Training Entry + Review Notes */}
+            {/* Left side: Training Entry + actions */}
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-xl sm:text-2xl font-semibold text-text-main">
                 Training Entry
@@ -72,6 +72,14 @@ const SessionLogPage: React.FC = () => {
                 className="text-xs"
               >
                 Review Notes
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/log/history")}
+                className="text-xs"
+              >
+                History
               </Button>
             </div>
 
