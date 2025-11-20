@@ -1,63 +1,75 @@
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Routes, Route } from "react-router-dom";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ProfileSetup from "./pages/ProfileSetup";
-import DiaryPage from "./pages/DiaryPage"; // Data Entry page
 import Landing from "./pages/Landing";
 
 import { AuthProvider } from "./auth/AuthContext";
 import { AuthGate } from "./components/Auth/AuthGate";
 import { LoginForm } from "./components/Auth/LoginForm";
 
-import Stats from "./pages/Stats";
-import Profile from "./pages/Profile";
-import StatsTrendPage from "./pages/StatsTrendPage"; // NEW: metrics trend page
+import Stats from "./pages/Stats"; // Full stats page
+import StatsTrendPage from "./pages/StatsTrendPage"; // Graph-only page
+import Profile from "./pages/Profile"; // Edit profile
+import NotesArchivePage from "./pages/NotesArchivePage"; // Notes archive
 
-import NotesArchivePage from "./pages/NotesArchivePage";
-...
-<Routes>
-  ...
-  <Route path="/notes" element={<NotesArchivePage />} />
-</Routes>
+// NEW: Morning / Session pages
+import MorningCheckinPage from "./pages/MorningCheckinPage";
+import SessionLogPage from "./pages/SessionLogPage";
 
-
+// Layout wrapper for authenticated app (bottom nav etc.)
+import { AppShell } from "./components/layout/AppShell";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App: React.FC = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <AuthProvider>
         <Routes>
-          {/* Public routes */}
+          {/* ---------- Public routes ---------- */}
           <Route path="/login" element={<LoginForm />} />
           <Route path="/landing" element={<Landing />} />
 
-          {/* Everything inside AuthGate requires login */}
+          {/* ---------- Authenticated app ---------- */}
           <Route element={<AuthGate />}>
-            {/* Initial entry point after login/auth check */}
-            <Route path="/" element={<Index />} />
+            {/* AppShell wraps all in-app pages (Today, Log, Stats, Profile, etc.) */}
+            <Route element={<AppShell />}>
+              {/* Initial entry point after login/auth check */}
+              <Route path="/" element={<Index />} />
 
-            {/* Profile setup route */}
-            <Route path="/profile-setup" element={<ProfileSetup />} />
+              {/* Today = Morning Check-in */}
+              <Route path="/today" element={<MorningCheckinPage />} />
 
-            {/* Main app pages */}
-            <Route path="/diary" element={<DiaryPage />} /> {/* Daily diary / data entry */}
-            <Route path="/stats" element={<Stats />} /> {/* Full stats page */}
-            <Route path="/stats/trend" element={<StatsTrendPage />} /> {/* Graph-only page */}
-            <Route path="/profile" element={<Profile />} /> {/* Edit profile */}
-			<Route path="/notes" element={<NotesArchivePage />} />
+              {/* Log = Session log */}
+              <Route path="/log" element={<SessionLogPage />} />
 
+              {/* Legacy diary alias -> Morning Check-in */}
+              <Route path="/diary" element={<MorningCheckinPage />} />
+
+              {/* Stats */}
+              <Route path="/stats" element={<Stats />} />
+              <Route path="/stats/trend" element={<StatsTrendPage />} />
+
+              {/* Profile / setup */}
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile-setup" element={<ProfileSetup />} />
+
+              {/* Notes archive */}
+              <Route path="/notes" element={<NotesArchivePage />} />
+            </Route>
           </Route>
 
-          {/* Catch-all */}
+          {/* ---------- Catch-all ---------- */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AuthProvider>
