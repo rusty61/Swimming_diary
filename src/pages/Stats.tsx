@@ -52,21 +52,6 @@ const Stats: React.FC = () => {
             </div>
           </Card>
 
-          {/* Full Stats Summary */}
-          <Card
-            className="cursor-pointer rounded-3xl border border-[var(--card-border)] px-4 py-3 transition hover:border-[var(--accent)]/70 hover:shadow-lg"
-            onClick={() => navigate("/stats/full")}
-          >
-            <div className="space-y-1">
-              <h2 className="text-base font-semibold text-foreground">
-                Full Stats Summary
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Original full dashboard with all charts and summary blocks.
-              </p>
-            </div>
-          </Card>
-
           {/* Weekly Averages */}
           <Card
             className="cursor-pointer rounded-3xl border border-[var(--card-border)] px-4 py-3 transition hover:border-[var(--accent)]/70 hover:shadow-lg"
@@ -92,8 +77,7 @@ const Stats: React.FC = () => {
                 Heart Rate Focus
               </h2>
               <p className="text-xs text-muted-foreground">
-                Opens a version of the daily chart with mood/volume tucked away
-                so you can isolate HR trends.
+                Heart-rate-only view for spotting red-flag and recovery days.
               </p>
             </div>
           </Card>

@@ -1,40 +1,62 @@
 // src/pages/StatsDailyPage.tsx
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/DatePicker";
 import CombinedDailyMetricsChart from "@/components/CombinedDailyMetricsChart";
 
 const StatsDailyPage: React.FC = () => {
   const navigate = useNavigate();
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [rangeDays, setRangeDays] = useState<number>(7);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const applyDate = () => {
+    setRefreshKey((k) => k + 1);
+  };
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-3 pb-6 pt-4">
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Header row */}
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <h1 className="text-3xl md:text-4xl font-semibold text-text-main">
             Daily Metrics Trend
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Single chart showing training volume, mood, and heart rate. Use the
-            legend pills underneath to turn each line on or off so it stays
-            readable on your phone.
-          </p>
+          <Button variant="outline" size="sm" onClick={() => navigate("/stats")}>
+            Back to Stats
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate("/stats")}
-          className="self-start"
-        >
-          Back to Stats
-        </Button>
-      </header>
 
-      <section className="rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)]/80 px-3 py-4 sm:px-5 sm:py-5">
-        <CombinedDailyMetricsChart />
-      </section>
+        {/* Date + update controls */}
+        <div className="mb-8 flex flex-wrap gap-4 items-center justify-center md:justify-start">
+          <DatePicker
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+          />
+          <Button
+            onClick={applyDate}
+            className="px-6 py-2 text-sm font-semibold tracking-[0.14em] uppercase"
+          >
+            Update
+          </Button>
+        </div>
+
+        {/* BIG trend chart */}
+        <div className="flex justify-center">
+          <div className="w-full max-w-5xl h-[520px]">
+            <CombinedDailyMetricsChart
+              selectedDate={selectedDate}
+              rangeDays={rangeDays}
+              setRangeDays={setRangeDays}
+              refreshKey={refreshKey}
+              className="h-full"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

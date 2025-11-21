@@ -17,14 +17,12 @@ import { AuthGate } from "./components/Auth/AuthGate";
 import { LoginForm } from "./components/Auth/LoginForm";
 
 import Stats from "./pages/Stats";
-import StatsTrendPage from "./pages/StatsTrendPage";
 import Profile from "./pages/Profile";
 import NotesArchivePage from "./pages/NotesArchivePage";
 
 import MorningCheckinPage from "./pages/MorningCheckinPage";
 import SessionLogPage from "./pages/SessionLogPage";
 import SavedEntriesPage from "./pages/SavedEntriesPage";
-import StatsGalleryPage from "./pages/StatsGalleryPage";
 import HowItWorksPage from "./pages/HowItWorksPage";
 
 import StatsDailyPage from "./pages/StatsDailyPage";
@@ -63,13 +61,11 @@ const App: React.FC = () => (
               {/* Legacy diary alias -> Morning Check-in */}
               <Route path="/diary" element={<MorningCheckinPage />} />
 
-              {/* Stats: gallery first, then deeper pages */}
-              <Route path="/stats" element={<StatsGalleryPage />} />
-              <Route path="/stats/trend" element={<StatsTrendPage />} />
+              {/* Stats hub + detail pages */}
+              <Route path="/stats" element={<Stats />} />
               <Route path="/stats/daily" element={<StatsDailyPage />} />
               <Route path="/stats/weekly" element={<StatsWeeklyPage />} />
               <Route path="/stats/heart" element={<StatsHeartPage />} />
-              <Route path="/stats/full" element={<Stats />} />
 
               {/* Profile / setup */}
               <Route path="/profile" element={<Profile />} />
