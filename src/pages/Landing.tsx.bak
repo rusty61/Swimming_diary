@@ -1,20 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/auth/AuthContext";
 import { showError } from "@/utils/toast";
-
-/**
- * TODO — CHECK THESE 2 LINES AGAINST YOUR SUPABASE SCHEMA.
- * This is the only part you may need to change.
- */
-const ENTRIES_TABLE = "daily_entries"; 
-// Expected columns (change if yours differ):
-// user_id: uuid/string
-// date: date/timestamp
-// distance_m: number (meters) OR distance_km: number (km)
-// mood: number (1..5)
+import { fetchAllEntriesForUser, DailyEntry } from "@/data/dailyEntriesSupabase";
+import { parseISO, isValid } from "date-fns";
 
 type WeeklyStats = {
   sessions: number;
@@ -31,12 +21,16 @@ const startOfWeekLocal = (d: Date) => {
   return date;
 };
 
-const endOfWeekLocal = (d: Date) => {
+const endOfWeekLocalExclusive = (d: Date) => {
   const s = startOfWeekLocal(d);
   const e = new Date(s);
   e.setDate(e.getDate() + 7);
+  e.setHours(0, 0, 0, 0);
   return e;
 };
+
+const inInterval = (dt: Date, start: Date, endExclusive: Date) =>
+  dt >= start && dt < endExclusive;
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -68,36 +62,33 @@ const Landing: React.FC = () => {
     const fetchWeeklyStats = async () => {
       setLoadingWeekly(true);
       try {
+        // Historical pull (all rows for user) via your canonical data layer
+        const allEntries: DailyEntry[] = await fetchAllEntriesForUser(user.id);
+
         const now = new Date();
-        const from = startOfWeekLocal(now).toISOString();
-        const to = endOfWeekLocal(now).toISOString();
+        const weekStart = startOfWeekLocal(now);
+        const weekEnd = endOfWeekLocalExclusive(now);
 
-        const { data, error } = await supabase
-          .from(ENTRIES_TABLE)
-          .select("date, mood, distance_m, distance_km")
-          .eq("user_id", user.id)
-          .gte("date", from)
-          .lt("date", to);
-
-        if (error) throw error;
-
-        const rows = data ?? [];
-        const sessions = rows.length;
-
+        let sessions = 0;
         let distanceKm = 0;
         let moodSum = 0;
         let moodCount = 0;
 
-        for (const r of rows) {
-          // Distance handling: accept meters OR km
-          if (typeof r.distance_km === "number") {
-            distanceKm += r.distance_km;
-          } else if (typeof r.distance_m === "number") {
-            distanceKm += r.distance_m / 1000;
+        for (const e of allEntries) {
+          if (!e.date) continue;
+          const dt = parseISO(e.date);
+          if (!isValid(dt)) continue;
+
+          if (!inInterval(dt, weekStart, weekEnd)) continue;
+
+          // "Session" = a day with training volume logged
+          if (typeof e.trainingVolume === "number" && e.trainingVolume > 0) {
+            sessions++;
+            distanceKm += e.trainingVolume;
           }
 
-          if (typeof r.mood === "number") {
-            moodSum += r.mood;
+          if (typeof e.mood === "number") {
+            moodSum += e.mood;
             moodCount++;
           }
         }
@@ -109,10 +100,10 @@ const Landing: React.FC = () => {
           distanceKm,
           avgMood,
         });
-      } catch (e: any) {
-        console.error("Weekly stats fetch failed:", e?.message || e);
-        // Don’t spam users on landing; just show zeros.
-        showError("Weekly stats not loading — check Supabase table/columns.");
+      } catch (err: any) {
+        console.error("Landing weekly stats error:", err?.message || err);
+        showError("Weekly stats not loading — Supabase fetch failed.");
+        setWeekly({ sessions: 0, distanceKm: 0, avgMood: null });
       } finally {
         setLoadingWeekly(false);
       }
@@ -204,11 +195,11 @@ const Landing: React.FC = () => {
           </div>
         </section>
 
-        {/* LOWER ROW — keep only the weekly summary (remove X-marked tiles) */}
+        {/* LOWER ROW — keep only weekly summary */}
         <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-          {/* This week so far (KEEP) */}
           <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl md:col-span-1">
             <div className="text-base font-semibold">This week so far</div>
+
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Sessions</span>
@@ -237,11 +228,11 @@ const Landing: React.FC = () => {
             </div>
 
             <div className="mt-4 text-xs text-muted-foreground">
-              Connect your store to show live totals and mood averages.
+              Live totals pulled from your Supabase diary_entries store.
             </div>
           </div>
 
-          {/* Spacer copies to preserve layout (EMPTY) */}
+          {/* Empty space to keep layout clean like your mock */}
           <div className="hidden md:block md:col-span-2" />
         </section>
 
@@ -249,7 +240,6 @@ const Landing: React.FC = () => {
           “Tough sets build fast swims.”
         </div>
 
-        {/* Optional logout if you want it here */}
         <div className="mt-6 flex justify-center">
           <Button variant="ghost" onClick={() => navigate("/diary")}>
             Go to Diary
