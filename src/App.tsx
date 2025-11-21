@@ -28,6 +28,9 @@ import StatsGalleryPage from "./pages/StatsGalleryPage";
 import HowItWorksPage from "./pages/HowItWorksPage";
 
 import StatsDailyPage from "./pages/StatsDailyPage";
+import StatsWeeklyPage from "./pages/StatsWeeklyPage";
+import StatsHeartPage from "./pages/StatsHeartPage";
+
 import { AppShell } from "./components/layout/AppShell";
 
 const queryClient = new QueryClient();
@@ -64,6 +67,8 @@ const App: React.FC = () => (
               <Route path="/stats" element={<StatsGalleryPage />} />
               <Route path="/stats/trend" element={<StatsTrendPage />} />
               <Route path="/stats/daily" element={<StatsDailyPage />} />
+              <Route path="/stats/weekly" element={<StatsWeeklyPage />} />
+              <Route path="/stats/heart" element={<StatsHeartPage />} />
               <Route path="/stats/full" element={<Stats />} />
 
               {/* Profile / setup */}

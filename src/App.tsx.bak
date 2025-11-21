@@ -1,3 +1,4 @@
+// src/App.tsx
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -26,6 +27,7 @@ import SavedEntriesPage from "./pages/SavedEntriesPage";
 import StatsGalleryPage from "./pages/StatsGalleryPage";
 import HowItWorksPage from "./pages/HowItWorksPage";
 
+import StatsDailyPage from "./pages/StatsDailyPage";
 import { AppShell } from "./components/layout/AppShell";
 
 const queryClient = new QueryClient();
@@ -61,6 +63,7 @@ const App: React.FC = () => (
               {/* Stats: gallery first, then deeper pages */}
               <Route path="/stats" element={<StatsGalleryPage />} />
               <Route path="/stats/trend" element={<StatsTrendPage />} />
+              <Route path="/stats/daily" element={<StatsDailyPage />} />
               <Route path="/stats/full" element={<Stats />} />
 
               {/* Profile / setup */}
