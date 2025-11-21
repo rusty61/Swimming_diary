@@ -8,7 +8,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 import { format, parseISO } from "date-fns";
@@ -46,6 +45,13 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
   const { user } = useAuth();
   const [chartData, setChartData] = useState<ChartDatum[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Legend visibility state
+  const [visibleLines, setVisibleLines] = useState({
+    trainingVolume: true,
+    heartRate: true,
+    mood: true,
+  });
 
   useEffect(() => {
     if (!user) {
@@ -104,6 +110,24 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
 
   const rangeOptions = [7, 14, 28, 90];
 
+  const toggleLine = (key: "trainingVolume" | "heartRate" | "mood") => {
+    setVisibleLines((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const hasTrainingVolume = chartData.some(
+    (entry) =>
+      entry.trainingVolume !== undefined && entry.trainingVolume !== null,
+  );
+  const hasHeartRate = chartData.some(
+    (entry) => entry.heartRate !== undefined && entry.heartRate !== null,
+  );
+  const hasMood = chartData.some(
+    (entry) => entry.mood !== undefined && entry.mood !== null,
+  );
+
   return (
     <Card
       className={cn(
@@ -129,114 +153,166 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 pt-2 pb-4">
+      <CardContent className="flex-1 pt-2 pb-4 flex flex-col">
         {loading ? (
           <div className="flex items-center justify-center h-full text-text-muted">
-            Loading chart...
+            Loading trend...
           </div>
         ) : chartData.length === 0 ? (
           <div className="flex items-center justify-center h-full text-text-muted">
             No data for this range yet.
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--line-subtle)" />
-              <XAxis dataKey="name" stroke="var(--text-muted)" />
+          <>
+            {/* Chart area */}
+            <div className="flex-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={chartData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="var(--line-subtle)"
+                  />
+                  <XAxis dataKey="name" stroke="var(--text-muted)" />
 
-              {/* LEFT AXIS = TRAINING VOLUME */}
-              <YAxis
-                yAxisId="trainingVolume"
-                stroke="#22c55e"
-                label={{
-                  value: "Training Volume (km)",
-                  angle: -90,
-                  
-                  fill: "#22c55e",
-                }}
-              />
+                  {/* LEFT AXIS = TRAINING VOLUME */}
+                  <YAxis
+                    yAxisId="trainingVolume"
+                    stroke="#22c55e"
+                    label={{
+                      value: "Training Volume (km)",
+                      angle: -90,
+                      fill: "#22c55e",
+                    }}
+                  />
 
-              {/* RIGHT AXIS = HEART RATE */}
-              <YAxis
-                yAxisId="heartRate"
-                orientation="right"
-                stroke="#ffffff"
-                label={{
-                  value: "Heart Rate (bpm)",
-                  angle: 90,
-                  position: "insideRight",
-                  fill: "#ffffff",
-                }}
-              />
+                  {/* RIGHT AXIS = HEART RATE */}
+                  <YAxis
+                    yAxisId="heartRate"
+                    orientation="right"
+                    stroke="#ffffff"
+                    label={{
+                      value: "Heart Rate (bpm)",
+                      angle: 90,
+                      position: "insideRight",
+                      fill: "#ffffff",
+                    }}
+                  />
 
-              {/* HIDDEN AXIS = MOOD (0–5 scale) */}
-              <YAxis
-                yAxisId="mood"
-                stroke="#4ea8ff"
-                domain={[0, 5]}
-                hide
-              />
+                  {/* HIDDEN AXIS = MOOD (0–5 scale) */}
+                  <YAxis
+                    yAxisId="mood"
+                    stroke="#4ea8ff"
+                    domain={[0, 5]}
+                    hide
+                  />
 
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "var(--card)",
-                  border: "1px solid var(--card-border)",
-                  color: "var(--text-main)",
-                }}
-              />
-              <Legend />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "var(--card)",
+                      border: "1px solid var(--card-border)",
+                      color: "var(--text-main)",
+                    }}
+                  />
 
-              {/* Training Volume = GREEN on left axis */}
-              {chartData.some(
-                (entry) =>
-                  entry.trainingVolume !== undefined &&
-                  entry.trainingVolume !== null,
-              ) && (
-                <Line
-                  yAxisId="trainingVolume"
-                  type="monotone"
-                  dataKey="trainingVolume"
-                  name="Training Volume"
-                  stroke="#22c55e"
-                  strokeWidth={1}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
+                  {/* Training Volume = GREEN on left axis */}
+                  {hasTrainingVolume && visibleLines.trainingVolume && (
+                    <Line
+                      yAxisId="trainingVolume"
+                      type="monotone"
+                      dataKey="trainingVolume"
+                      name="Training Volume"
+                      stroke="#22c55e"
+                      strokeWidth={1}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  )}
+
+                  {/* Heart rate = WHITE on right axis */}
+                  {hasHeartRate && visibleLines.heartRate && (
+                    <Line
+                      yAxisId="heartRate"
+                      type="monotone"
+                      dataKey="heartRate"
+                      name="Heart Rate"
+                      stroke="#ffffff"
+                      strokeWidth={1}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  )}
+
+                  {/* Mood = BLUE, uses hidden axis (0–5) */}
+                  {hasMood && visibleLines.mood && (
+                    <Line
+                      yAxisId="mood"
+                      type="monotone"
+                      dataKey="mood"
+                      name="Mood"
+                      stroke="#4ea8ff"
+                      strokeWidth={1}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  )}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Legend toggles */}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm">
+              {hasTrainingVolume && (
+                <button
+                  type="button"
+                  onClick={() => toggleLine("trainingVolume")}
+                  className={cn(
+                    "px-3 py-1 rounded-full border text-xs sm:text-sm flex items-center gap-2",
+                    visibleLines.trainingVolume
+                      ? "bg-emerald-500/20 border-emerald-400 text-emerald-200"
+                      : "bg-transparent border-emerald-700 text-emerald-400/70",
+                  )}
+                >
+                  <span className="inline-block h-2 w-6 rounded-full bg-emerald-400" />
+                  Training Volume
+                </button>
               )}
 
-              {/* Heart rate = WHITE on right axis */}
-              {chartData.some(
-                (entry) =>
-                  entry.heartRate !== undefined && entry.heartRate !== null,
-              ) && (
-                <Line
-                  yAxisId="heartRate"
-                  type="monotone"
-                  dataKey="heartRate"
-                  name="Heart Rate"
-                  stroke="#ffffff"
-                  strokeWidth={1}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
+              {hasHeartRate && (
+                <button
+                  type="button"
+                  onClick={() => toggleLine("heartRate")}
+                  className={cn(
+                    "px-3 py-1 rounded-full border text-xs sm:text-sm flex items-center gap-2",
+                    visibleLines.heartRate
+                      ? "bg-white/10 border-white text-white"
+                      : "bg-transparent border-white/40 text-white/70",
+                  )}
+                >
+                  <span className="inline-block h-2 w-6 rounded-full bg-white" />
+                  Heart Rate
+                </button>
               )}
 
-              {/* Mood = BLUE, uses hidden axis (0–5) */}
-              <Line
-                yAxisId="mood"
-                type="monotone"
-                dataKey="mood"
-                name="Mood"
-                stroke="#4ea8ff"
-                strokeWidth={1}
-                dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+              {hasMood && (
+                <button
+                  type="button"
+                  onClick={() => toggleLine("mood")}
+                  className={cn(
+                    "px-3 py-1 rounded-full border text-xs sm:text-sm flex items-center gap-2",
+                    visibleLines.mood
+                      ? "bg-sky-500/20 border-sky-400 text-sky-200"
+                      : "bg-transparent border-sky-700 text-sky-400/70",
+                  )}
+                >
+                  <span className="inline-block h-2 w-6 rounded-full bg-sky-400" />
+                  Mood
+                </button>
+              )}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

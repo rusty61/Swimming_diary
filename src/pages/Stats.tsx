@@ -1,60 +1,104 @@
+// src/pages/Stats.tsx
 "use client";
 
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MadeWithDyad } from "@/components/made-with-dyad";
-import CombinedDailyMetricsChart from "@/components/CombinedDailyMetricsChart"; // Re-using existing chart
-import WeeklyTrainingAveragesChart from "@/components/WeeklyTrainingAveragesChart"; // New chart
-import MotivationBoostCard from "@/components/MotivationBoostCard"; // Import MotivationBoostCard
 
-const Stats = () => {
-  const [chartRangeDays, setChartRangeDays] = useState<number>(28); // Default to 4 weeks for daily metrics
-  const selectedDate = new Date(); // Stats page typically shows data up to today
+const Stats: React.FC = () => {
+  const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4">
-      <div className="w-full max-w-7xl mx-auto space-y-8">
-        <Card className="w-full shadow-lg rounded-lg bg-card text-foreground border-card-border text-center">
-          <CardHeader>
-            <CardTitle className="text-3xl font-bold text-accent">Performance Statistics</CardTitle>
-            <CardDescription className="text-text-muted mt-2">
-              Dive deep into your training trends and historical data.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 p-6">
-            <p className="text-lg text-text-main">
-              Analyze your progress over time with detailed charts and summaries.
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Header */}
+        <header className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-semibold text-text-main">
+              Stats
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Pick one chart to review at a time. Each button opens a dedicated
+              view so you're not scrolling through stacked graphs.
             </p>
-            <Button asChild className="bg-primary hover:bg-accent-strong text-primary-foreground text-lg py-2 rounded-md">
-              <Link to="/diary">Go to Daily Diary</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Combined Daily Metrics Chart */}
-          <div className="col-span-full">
-            <CombinedDailyMetricsChart
-              selectedDate={selectedDate}
-              rangeDays={chartRangeDays}
-              setRangeDays={setChartRangeDays}
-            />
           </div>
 
-          {/* Weekly Training Averages Chart */}
-          <div className="col-span-full">
-            <WeeklyTrainingAveragesChart numWeeks={12} /> {/* Show last 12 weeks */}
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/today")}
+            className="self-start"
+          >
+            Back to Today
+          </Button>
+        </header>
 
-          {/* Add more historical data components here as needed */}
-        </div>
+        {/* Tiles */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Daily Trends */}
+          <Card
+            className="cursor-pointer rounded-3xl border border-[var(--card-border)] px-4 py-3 transition hover:border-[var(--accent)]/70 hover:shadow-lg"
+            onClick={() => navigate("/stats/daily")}
+          >
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-foreground">
+                Daily Trends
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Single daily chart. Use the legend to toggle Training Volume,
+                Heart Rate, or Mood.
+              </p>
+            </div>
+          </Card>
+
+          {/* Full Stats Summary */}
+          <Card
+            className="cursor-pointer rounded-3xl border border-[var(--card-border)] px-4 py-3 transition hover:border-[var(--accent)]/70 hover:shadow-lg"
+            onClick={() => navigate("/stats/full")}
+          >
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-foreground">
+                Full Stats Summary
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Original full dashboard with all charts and summary blocks.
+              </p>
+            </div>
+          </Card>
+
+          {/* Weekly Averages */}
+          <Card
+            className="cursor-pointer rounded-3xl border border-[var(--card-border)] px-4 py-3 transition hover:border-[var(--accent)]/70 hover:shadow-lg"
+            onClick={() => navigate("/stats/weekly")}
+          >
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-foreground">
+                Weekly Averages
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Weekly bar chart so you can spot overload quickly.
+              </p>
+            </div>
+          </Card>
+
+          {/* Heart Rate Focus */}
+          <Card
+            className="cursor-pointer rounded-3xl border border-[var(--card-border)] px-4 py-3 transition hover:border-[var(--accent)]/70 hover:shadow-lg"
+            onClick={() => navigate("/stats/heart")}
+          >
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-foreground">
+                Heart Rate Focus
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Opens a version of the daily chart with mood/volume tucked away
+                so you can isolate HR trends.
+              </p>
+            </div>
+          </Card>
+        </section>
       </div>
-      <div className="w-full max-w-2xl mt-8">
-        <MotivationBoostCard />
-      </div>
-      <MadeWithDyad />
     </div>
   );
 };

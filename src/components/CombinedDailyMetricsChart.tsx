@@ -1,3 +1,4 @@
+// src/components/CombinedDailyMetricsChart.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -21,9 +22,9 @@ import { useAuth } from "@/auth/AuthContext";
 import { cn } from "@/lib/utils";
 
 interface CombinedDailyMetricsChartProps {
-  selectedDate: Date;
-  rangeDays: number;
-  setRangeDays: (days: number) => void;
+  selectedDate?: Date;
+  rangeDays?: number;
+  setRangeDays?: (days: number) => void;
   refreshKey?: number;
   className?: string;
 }
@@ -36,8 +37,8 @@ type ChartDatum = {
 };
 
 const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
-  selectedDate,
-  rangeDays,
+  selectedDate = new Date(),
+  rangeDays = 7,
   setRangeDays,
   refreshKey,
   className,
@@ -145,7 +146,8 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
               key={days}
               variant={rangeDays === days ? "default" : "outline"}
               size="sm"
-              onClick={() => setRangeDays(days)}
+              onClick={() => setRangeDays && setRangeDays(days)}
+              disabled={!setRangeDays}
             >
               {days}d
             </Button>
