@@ -1,19 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/auth/AuthContext";
 import { showError } from "@/utils/toast";
 import { fetchAllEntriesForUser, DailyEntry } from "@/data/dailyEntriesSupabase";
 import { parseISO, isValid } from "date-fns";
 
-// ✅ If any button still fails, your routes differ.
-// Fix by changing ONLY these 4 paths to match App.tsx.
+// ✅ THESE MATCH YOUR App.tsx EXACTLY
 const ROUTES = {
-  morning: "/morning-checkin",
-  session: "/session-log",
+  morning: "/today",
+  session: "/log",
+  saved: "/log/history",
   stats: "/stats",
-  saved: "/saved-entries",
-  diary: "/diary",
+  diary: "/diary", // alias -> MorningCheckinPage
 };
 
 type WeeklyStats = {
@@ -156,45 +155,45 @@ const Landing: React.FC = () => {
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <Link
-                to={ROUTES.morning}
+              <button
+                onClick={() => navigate(ROUTES.morning)}
                 className="rounded-2xl border border-white/5 bg-background/50 p-4 text-left transition hover:bg-background/70"
               >
                 <div className="font-semibold">Morning check-in</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Log mood + resting HR
                 </div>
-              </Link>
+              </button>
 
-              <Link
-                to={ROUTES.session}
+              <button
+                onClick={() => navigate(ROUTES.session)}
                 className="rounded-2xl border border-white/5 bg-background/50 p-4 text-left transition hover:bg-background/70"
               >
                 <div className="font-semibold">Log a session</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Distance, pace, notes
                 </div>
-              </Link>
+              </button>
 
-              <Link
-                to={ROUTES.stats}
+              <button
+                onClick={() => navigate(ROUTES.stats)}
                 className="rounded-2xl border border-white/5 bg-background/50 p-4 text-left transition hover:bg-background/70"
               >
                 <div className="font-semibold">View stats</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Trends & weekly totals
                 </div>
-              </Link>
+              </button>
 
-              <Link
-                to={ROUTES.saved}
+              <button
+                onClick={() => navigate(ROUTES.saved)}
                 className="rounded-2xl border border-white/5 bg-background/50 p-4 text-left transition hover:bg-background/70"
               >
                 <div className="font-semibold">Saved entries</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Browse past highlights
                 </div>
-              </Link>
+              </button>
             </div>
           </div>
         </section>
@@ -239,7 +238,7 @@ const Landing: React.FC = () => {
           <div className="hidden md:block md:col-span-2" />
         </section>
 
-        {/* MOTIVATION CARD — now matches style */}
+        {/* MOTIVATION CARD — matching style */}
         <section className="mt-8">
           <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl">
             <div className="text-center text-sm italic text-muted-foreground">

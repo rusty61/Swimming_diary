@@ -1,10 +1,20 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/auth/AuthContext";
 import { showError } from "@/utils/toast";
 import { fetchAllEntriesForUser, DailyEntry } from "@/data/dailyEntriesSupabase";
 import { parseISO, isValid } from "date-fns";
+
+// ✅ If any button still fails, your routes differ.
+// Fix by changing ONLY these 4 paths to match App.tsx.
+const ROUTES = {
+  morning: "/morning-checkin",
+  session: "/session-log",
+  stats: "/stats",
+  saved: "/saved-entries",
+  diary: "/diary",
+};
 
 type WeeklyStats = {
   sessions: number;
@@ -62,7 +72,6 @@ const Landing: React.FC = () => {
     const fetchWeeklyStats = async () => {
       setLoadingWeekly(true);
       try {
-        // Historical pull (all rows for user) via your canonical data layer
         const allEntries: DailyEntry[] = await fetchAllEntriesForUser(user.id);
 
         const now = new Date();
@@ -81,10 +90,9 @@ const Landing: React.FC = () => {
 
           if (!inInterval(dt, weekStart, weekEnd)) continue;
 
-          // "Session" = a day with training volume logged
           if (typeof e.trainingVolume === "number" && e.trainingVolume > 0) {
             sessions++;
-            distanceKm += e.trainingVolume;
+            distanceKm += e.trainingVolume; // km
           }
 
           if (typeof e.mood === "number") {
@@ -95,11 +103,7 @@ const Landing: React.FC = () => {
 
         const avgMood = moodCount > 0 ? moodSum / moodCount : null;
 
-        setWeekly({
-          sessions,
-          distanceKm,
-          avgMood,
-        });
+        setWeekly({ sessions, distanceKm, avgMood });
       } catch (err: any) {
         console.error("Landing weekly stats error:", err?.message || err);
         showError("Weekly stats not loading — Supabase fetch failed.");
@@ -144,7 +148,7 @@ const Landing: React.FC = () => {
             </div>
           </div>
 
-          {/* FAST ACTIONS (keep) */}
+          {/* FAST ACTIONS */}
           <div className="rounded-3xl border border-white/5 bg-card/60 p-7 shadow-xl">
             <h2 className="text-xl font-semibold">Fast actions</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -152,50 +156,50 @@ const Landing: React.FC = () => {
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <button
-                onClick={() => navigate("/morning-checkin")}
+              <Link
+                to={ROUTES.morning}
                 className="rounded-2xl border border-white/5 bg-background/50 p-4 text-left transition hover:bg-background/70"
               >
                 <div className="font-semibold">Morning check-in</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Log mood + resting HR
                 </div>
-              </button>
+              </Link>
 
-              <button
-                onClick={() => navigate("/session")}
+              <Link
+                to={ROUTES.session}
                 className="rounded-2xl border border-white/5 bg-background/50 p-4 text-left transition hover:bg-background/70"
               >
                 <div className="font-semibold">Log a session</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Distance, pace, notes
                 </div>
-              </button>
+              </Link>
 
-              <button
-                onClick={() => navigate("/stats")}
+              <Link
+                to={ROUTES.stats}
                 className="rounded-2xl border border-white/5 bg-background/50 p-4 text-left transition hover:bg-background/70"
               >
                 <div className="font-semibold">View stats</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Trends & weekly totals
                 </div>
-              </button>
+              </Link>
 
-              <button
-                onClick={() => navigate("/saved")}
+              <Link
+                to={ROUTES.saved}
                 className="rounded-2xl border border-white/5 bg-background/50 p-4 text-left transition hover:bg-background/70"
               >
                 <div className="font-semibold">Saved entries</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Browse past highlights
                 </div>
-              </button>
+              </Link>
             </div>
           </div>
         </section>
 
-        {/* LOWER ROW — keep only weekly summary */}
+        {/* WEEKLY SUMMARY */}
         <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl md:col-span-1">
             <div className="text-base font-semibold">This week so far</div>
@@ -232,19 +236,23 @@ const Landing: React.FC = () => {
             </div>
           </div>
 
-          {/* Empty space to keep layout clean like your mock */}
           <div className="hidden md:block md:col-span-2" />
         </section>
 
-        <div className="mt-10 text-center text-sm italic text-muted-foreground">
-          “Tough sets build fast swims.”
-        </div>
+        {/* MOTIVATION CARD — now matches style */}
+        <section className="mt-8">
+          <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl">
+            <div className="text-center text-sm italic text-muted-foreground">
+              “Tough sets build fast swims.”
+            </div>
 
-        <div className="mt-6 flex justify-center">
-          <Button variant="ghost" onClick={() => navigate("/diary")}>
-            Go to Diary
-          </Button>
-        </div>
+            <div className="mt-4 flex justify-center">
+              <Button onClick={() => navigate(ROUTES.diary)}>
+                Go to Diary
+              </Button>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   );
