@@ -54,7 +54,7 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
     mood: true,
   });
 
-  // On mobile, default to ONLY Training Volume to avoid unreadable overlap
+  // On mobile, default to ONLY Training Volume for readability
   useEffect(() => {
     if (typeof window === "undefined") return;
     const isMobile = window.innerWidth < 768;
@@ -179,105 +179,109 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
         ) : (
           <>
             {/* Chart area */}
-            <div className="flex-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={chartData}
-                  margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--line-subtle)"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    stroke="var(--text-muted)"
-                    tick={{ fontSize: 11 }}
-                  />
+            <div className="flex-1 overflow-x-auto">
+              {/* On mobile, this inner div is wider than the viewport, so you can scroll sideways.
+                 On >=sm screens, min-w resets so it behaves normally. */}
+              <div className="min-w-[900px] h-[260px] sm:min-w-0 sm:h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={chartData}
+                    margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--line-subtle)"
+                    />
+                    <XAxis
+                      dataKey="name"
+                      stroke="var(--text-muted)"
+                      tick={{ fontSize: 11 }}
+                    />
 
-                  {/* LEFT AXIS = TRAINING VOLUME */}
-                  <YAxis
-                    yAxisId="trainingVolume"
-                    stroke="#22c55e"
-                    label={{
-                      value: "Training Volume (km)",
-                      angle: -90,
-                      fill: "#22c55e",
-                    }}
-                  />
-
-                  {/* RIGHT AXIS = HEART RATE */}
-                  <YAxis
-                    yAxisId="heartRate"
-                    orientation="right"
-                    stroke="#ffffff"
-                    label={{
-                      value: "Heart Rate (bpm)",
-                      angle: 90,
-                      position: "insideRight",
-                      fill: "#ffffff",
-                    }}
-                  />
-
-                  {/* HIDDEN AXIS = MOOD (0–5 scale) */}
-                  <YAxis
-                    yAxisId="mood"
-                    stroke="#4ea8ff"
-                    domain={[0, 5]}
-                    hide
-                  />
-
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "var(--card)",
-                      border: "1px solid var(--card-border)",
-                      color: "var(--text-main)",
-                    }}
-                  />
-
-                  {/* Training Volume = GREEN on left axis */}
-                  {hasTrainingVolume && visibleLines.trainingVolume && (
-                    <Line
+                    {/* LEFT AXIS = TRAINING VOLUME */}
+                    <YAxis
                       yAxisId="trainingVolume"
-                      type="monotone"
-                      dataKey="trainingVolume"
-                      name="Training Volume"
                       stroke="#22c55e"
-                      strokeWidth={1}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
+                      label={{
+                        value: "Training Volume (km)",
+                        angle: -90,
+                        fill: "#22c55e",
+                      }}
                     />
-                  )}
 
-                  {/* Heart rate = WHITE on right axis */}
-                  {hasHeartRate && visibleLines.heartRate && (
-                    <Line
+                    {/* RIGHT AXIS = HEART RATE */}
+                    <YAxis
                       yAxisId="heartRate"
-                      type="monotone"
-                      dataKey="heartRate"
-                      name="Heart Rate"
+                      orientation="right"
                       stroke="#ffffff"
-                      strokeWidth={1}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
+                      label={{
+                        value: "Heart Rate (bpm)",
+                        angle: 90,
+                        position: "insideRight",
+                        fill: "#ffffff",
+                      }}
                     />
-                  )}
 
-                  {/* Mood = BLUE, uses hidden axis (0–5) */}
-                  {hasMood && visibleLines.mood && (
-                    <Line
+                    {/* HIDDEN AXIS = MOOD (0–5 scale) */}
+                    <YAxis
                       yAxisId="mood"
-                      type="monotone"
-                      dataKey="mood"
-                      name="Mood"
                       stroke="#4ea8ff"
-                      strokeWidth={1}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
+                      domain={[0, 5]}
+                      hide
                     />
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
+
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "var(--card)",
+                        border: "1px solid var(--card-border)",
+                        color: "var(--text-main)",
+                      }}
+                    />
+
+                    {/* Training Volume = GREEN on left axis */}
+                    {hasTrainingVolume && visibleLines.trainingVolume && (
+                      <Line
+                        yAxisId="trainingVolume"
+                        type="monotone"
+                        dataKey="trainingVolume"
+                        name="Training Volume"
+                        stroke="#22c55e"
+                        strokeWidth={1}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    )}
+
+                    {/* Heart rate = WHITE on right axis */}
+                    {hasHeartRate && visibleLines.heartRate && (
+                      <Line
+                        yAxisId="heartRate"
+                        type="monotone"
+                        dataKey="heartRate"
+                        name="Heart Rate"
+                        stroke="#ffffff"
+                        strokeWidth={1}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    )}
+
+                    {/* Mood = BLUE, uses hidden axis (0–5) */}
+                    {hasMood && visibleLines.mood && (
+                      <Line
+                        yAxisId="mood"
+                        type="monotone"
+                        dataKey="mood"
+                        name="Mood"
+                        stroke="#4ea8ff"
+                        strokeWidth={1}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             {/* Legend toggles */}

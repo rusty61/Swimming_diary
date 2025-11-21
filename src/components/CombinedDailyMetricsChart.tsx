@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { format, parseISO } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ import {
 } from "@/data/dailyEntriesSupabase";
 import { useAuth } from "@/auth/AuthContext";
 import { cn } from "@/lib/utils";
+import { Maximize2 } from "lucide-react";
 
 interface CombinedDailyMetricsChartProps {
   selectedDate?: Date;
@@ -44,6 +46,8 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
   className,
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
   const [chartData, setChartData] = useState<ChartDatum[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -178,10 +182,8 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
           </div>
         ) : (
           <>
-            {/* Chart area */}
+            {/* Chart area — scrolls horizontally on small screens */}
             <div className="flex-1 overflow-x-auto">
-              {/* On mobile, this inner div is wider than the viewport, so you can scroll sideways.
-                 On >=sm screens, min-w resets so it behaves normally. */}
               <div className="min-w-[900px] h-[260px] sm:min-w-0 sm:h-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
@@ -333,6 +335,19 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
                   Mood
                 </button>
               )}
+            </div>
+
+            {/* Full-screen expand button (like Blynk) */}
+            <div className="mt-3 flex justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full border border-[var(--card-border)] bg-background/60 hover:bg-background sm:h-7 sm:w-7"
+                onClick={() => navigate("/stats/daily/full")}
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </>
         )}
