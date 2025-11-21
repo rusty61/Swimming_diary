@@ -93,12 +93,13 @@ const MorningCheckinPage: React.FC = () => {
             {/* 1. Heading */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-start gap-1">
               <h2 className="text-2xl sm:text-3xl font-semibold text-text-main">
-                Daily Entry
-              </h2>
+             </h2>
+              {/*
               <p className="text-xs text-muted-foreground">
-                Mood &amp; heart rate
-              </p>
-            </div>
+               Mood &amp; heart rate
+               </p>
+               */}
+             </div>
 
             {/* 2. Date picker */}
             <div className="flex justify-center">

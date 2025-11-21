@@ -54,6 +54,19 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
     mood: true,
   });
 
+  // On mobile, default to ONLY Training Volume to avoid unreadable overlap
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setVisibleLines({
+        trainingVolume: true,
+        heartRate: false,
+        mood: false,
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) {
       setChartData([]);
@@ -92,7 +105,6 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
           };
         });
 
-        console.log("[CombinedDailyMetricsChart] data:", transformed);
         if (!cancelled) setChartData(transformed);
       } catch (err) {
         console.error("[CombinedDailyMetricsChart] error:", err);
@@ -132,12 +144,12 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
   return (
     <Card
       className={cn(
-        "w-full h-[420px] shadow-lg rounded-lg bg-card text-foreground border-card-border flex flex-col px-4",
+        "w-full h-[420px] sm:h-[460px] shadow-lg rounded-lg bg-card text-foreground border-card-border flex flex-col px-3 sm:px-4",
         className,
       )}
     >
       <CardHeader className="flex flex-row items-center justify-between pb-4 pt-4">
-        <CardTitle className="text-xl font-semibold text-accent">
+        <CardTitle className="text-lg sm:text-xl font-semibold text-accent">
           Daily Metrics Trend
         </CardTitle>
         <div className="flex space-x-2">
@@ -171,13 +183,17 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={chartData}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
                 >
                   <CartesianGrid
                     strokeDasharray="3 3"
                     stroke="var(--line-subtle)"
                   />
-                  <XAxis dataKey="name" stroke="var(--text-muted)" />
+                  <XAxis
+                    dataKey="name"
+                    stroke="var(--text-muted)"
+                    tick={{ fontSize: 11 }}
+                  />
 
                   {/* LEFT AXIS = TRAINING VOLUME */}
                   <YAxis
