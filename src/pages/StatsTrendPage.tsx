@@ -45,12 +45,13 @@ const StatsTrendPage: React.FC = () => {
 
         {/* BIG trend chart */}
         <div className="flex justify-center">
-          <div className="w-full max-w-5xl origin-top scale-125 md:scale-125 sm:scale-110">
+          <div className="w-full max-w-5xl h-[520px]">
             <CombinedDailyMetricsChart
               selectedDate={selectedDate}
               rangeDays={chartRangeDays}
               setRangeDays={setChartRangeDays}
               refreshKey={refreshKey}
+              className="h-full"
             />
           </div>
         </div>
