@@ -3,7 +3,7 @@
 import React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarIcon } from "lucide-react";
-import { format, parseISO, isValid } from "date-fns"; // Import isValid
+import { format, parseISO, isValid } from "date-fns";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
@@ -27,7 +27,6 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-
 } from "@/components/ui/popover";
 import {
   Select,
@@ -41,28 +40,12 @@ import { showSuccess, showError } from "@/utils/toast";
 import MotivationBoostCard from "@/components/MotivationBoostCard";
 
 const formSchema = z.object({
-  username: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
-  }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
-  gender: z.enum(["Male", "Female", "Other"], {
-    required_error: "Please select your gender.",
-  }),
-  dateOfBirth: z.date({
-    required_error: "A date of birth is required.",
-  }),
-  height: z.number().min(50, {
-    message: "Height must be at least 50 cm.",
-  }).max(250, {
-    message: "Height cannot exceed 250 cm.",
-  }),
-  weight: z.number().min(20, {
-    message: "Weight must be at least 20 kg.",
-  }).max(300, {
-    message: "Weight cannot exceed 300 kg.",
-  }),
+  username: z.string().min(2, { message: "Username must be at least 2 characters." }),
+  email: z.string().email({ message: "Please enter a valid email address." }),
+  gender: z.enum(["Male", "Female", "Other"], { required_error: "Please select your gender." }),
+  dateOfBirth: z.date({ required_error: "A date of birth is required." }),
+  height: z.number().min(50, { message: "Height must be at least 50 cm." }).max(250, { message: "Height cannot exceed 250 cm." }),
+  weight: z.number().min(20, { message: "Weight must be at least 20 kg." }).max(300, { message: "Weight cannot exceed 300 kg." }),
   lastPeriodStartDate: z.date().optional(),
 });
 
@@ -78,16 +61,54 @@ export default function ProfileSetup() {
       gender: "Male",
       height: 170,
       weight: 70,
-      dateOfBirth: new Date(), // Provide a default valid date
+      dateOfBirth: new Date(),
       lastPeriodStartDate: undefined,
     },
   });
 
   React.useEffect(() => {
-    if (user?.email) {
-      form.setValue("email", user.email);
-      form.clearErrors("email");
-    }
+    if (!user) return;
+
+    form.setValue("email", user.email || "");
+    form.clearErrors("email");
+
+    const fetchProfile = async () => {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("first_name, last_name, gender, date_of_birth, height, weight, last_period_start_date")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError && profileError.code !== "PGRST116") {
+        console.error("Error fetching profile:", profileError);
+        showError(`Failed to load profile: ${profileError.message}`);
+        return;
+      }
+
+      const { data: userData } = await supabase.auth.getUser();
+      const md = userData?.user?.user_metadata || {};
+
+      if (profileData) {
+        form.setValue("username", profileData.first_name || "");
+        form.setValue("gender", (profileData.gender || md.gender || "Male") as any);
+        form.setValue("height", profileData.height ?? md.height ?? 170);
+        form.setValue("weight", profileData.weight ?? md.weight ?? 70);
+
+        const dobStr = profileData.date_of_birth || md.date_of_birth;
+        if (dobStr) {
+          const dob = parseISO(dobStr);
+          if (isValid(dob)) form.setValue("dateOfBirth", dob);
+        }
+
+        const lpStr = profileData.last_period_start_date || md.last_period_start_date;
+        if (lpStr) {
+          const lp = parseISO(lpStr);
+          if (isValid(lp)) form.setValue("lastPeriodStartDate", lp);
+        }
+      }
+    };
+
+    fetchProfile();
   }, [user, form]);
 
   const gender = form.watch("gender");
@@ -100,35 +121,28 @@ export default function ProfileSetup() {
     }
 
     try {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          first_name: values.username,
-        });
+      const payload = {
+        id: user.id,
+        first_name: values.username,
+        gender: values.gender,
+        date_of_birth: format(values.dateOfBirth, "yyyy-MM-dd"),
+        height: values.height,
+        weight: values.weight,
+        last_period_start_date: values.lastPeriodStartDate
+          ? format(values.lastPeriodStartDate, "yyyy-MM-dd")
+          : null,
+      };
 
-      if (profileError) {
-        console.error("Supabase profile upsert error:", profileError);
-        throw new Error(`Failed to update profile in database: ${profileError.message}`);
-      }
+      const { error } = await supabase
+        .from("profiles")
+        .upsert(payload, { onConflict: "id" });
 
-      const { data: updateData, error: updateError } = await supabase.auth.updateUser({
-        data: {
-          gender: values.gender,
-          date_of_birth: format(values.dateOfBirth, "yyyy-MM-dd"),
-          height: values.height,
-          weight: values.weight,
-          last_period_start_date: values.lastPeriodStartDate ? format(values.lastPeriodStartDate, "yyyy-MM-dd") : null,
-        }
-      });
-
-      if (updateError) {
-        console.error("Supabase user metadata update error:", updateError);
-        throw new Error(`Failed to update user metadata: ${updateError.message}`);
+      if (error) {
+        console.error("Supabase profile upsert error:", error);
+        throw new Error(`Failed to update profile in database: ${error.message}`);
       }
 
       showSuccess("Profile updated successfully!");
-      console.log("Profile setup complete, navigating to dashboard.");
       navigate("/dashboard");
     } catch (error) {
       const message =
@@ -144,7 +158,7 @@ export default function ProfileSetup() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4 text-accent">Loading...</h1>
+          <h1 className="text-4xl font-bold mb-4 text-accent">Loading.</h1>
           <p className="text-xl text-text-muted">Checking authentication status.</p>
         </div>
       </div>
@@ -160,9 +174,11 @@ export default function ProfileSetup() {
             Please provide your details to personalize your training experience.
           </CardDescription>
         </CardHeader>
+
         <CardContent className="bg-card">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+
               <FormField
                 control={form.control}
                 name="username"
@@ -170,7 +186,11 @@ export default function ProfileSetup() {
                   <FormItem>
                     <FormLabel className="text-lg text-text-main">Username</FormLabel>
                     <FormControl>
-                      <Input placeholder="Your username" {...field} className="bg-input text-foreground border-border" />
+                      <Input
+                        placeholder="Your username"
+                        {...field}
+                        className="bg-input text-foreground border-border"
+                      />
                     </FormControl>
                     <FormDescription className="text-text-muted">
                       This is your public display name.
@@ -179,6 +199,7 @@ export default function ProfileSetup() {
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="email"
@@ -186,7 +207,13 @@ export default function ProfileSetup() {
                   <FormItem>
                     <FormLabel className="text-lg text-text-main">Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="your@example.com" {...field} disabled={!!user?.email} className="bg-input text-foreground border-border" />
+                      <Input
+                        type="email"
+                        placeholder="your@example.com"
+                        {...field}
+                        disabled={!!user?.email}
+                        className="bg-input text-foreground border-border"
+                      />
                     </FormControl>
                     <FormDescription className="text-text-muted">
                       We'll send important updates here.
@@ -195,13 +222,14 @@ export default function ProfileSetup() {
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="gender"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-lg text-text-main">Gender</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="bg-input text-foreground border-border">
                           <SelectValue placeholder="Select your gender" />
@@ -220,6 +248,7 @@ export default function ProfileSetup() {
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="dateOfBirth"
@@ -236,23 +265,18 @@ export default function ProfileSetup() {
                               !field.value && "text-muted-foreground"
                             )}
                           >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
+                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
+
                       <PopoverContent className="w-auto p-0 bg-white text-gray-900 border-border" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
+                          disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                           initialFocus
                           className="calendar-red-dates"
                           captionLayout="dropdown"
@@ -268,6 +292,7 @@ export default function ProfileSetup() {
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="height"
@@ -275,8 +300,13 @@ export default function ProfileSetup() {
                   <FormItem>
                     <FormLabel className="text-lg text-text-main">Height (cm)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 175"
-                        className="w-32 bg-input text-foreground border-border"  {...field} onChange={event => field.onChange(parseFloat(event.target.value))} />
+                      <Input
+                        type="number"
+                        placeholder="e.g. 175"
+                        className="w-32 bg-input text-foreground border-border"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                      />
                     </FormControl>
                     <FormDescription className="text-text-muted">
                       Your height in centimeters.
@@ -285,6 +315,7 @@ export default function ProfileSetup() {
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="weight"
@@ -292,8 +323,13 @@ export default function ProfileSetup() {
                   <FormItem>
                     <FormLabel className="text-lg text-text-main">Weight (kg)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 70"
-                       className="w-32 bg-input text-foreground border-border"   {...field} onChange={event => field.onChange(parseFloat(event.target.value))} />
+                      <Input
+                        type="number"
+                        placeholder="e.g. 70"
+                        className="w-32 bg-input text-foreground border-border"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                      />
                     </FormControl>
                     <FormDescription className="text-text-muted">
                       Your weight in kilograms.
@@ -303,7 +339,7 @@ export default function ProfileSetup() {
                 )}
               />
 
-              {gender === 'Female' && (
+              {gender === "Female" && (
                 <FormField
                   control={form.control}
                   name="lastPeriodStartDate"
@@ -320,23 +356,18 @@ export default function ProfileSetup() {
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
+                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
+
                         <PopoverContent className="w-auto p-0 bg-white text-gray-900 border-border" align="start">
                           <Calendar
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1900-01-01")
-                            }
+                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                             initialFocus
                             className="calendar-red-dates"
                             captionLayout="dropdown"
@@ -354,13 +385,18 @@ export default function ProfileSetup() {
                 />
               )}
 
-              <Button type="submit" className="w-full bg-primary hover:bg-accent-strong text-primary-foreground text-lg py-2 rounded-md">
+              <Button
+                type="submit"
+                className="w-full bg-primary hover:bg-accent-strong text-primary-foreground text-lg py-2 rounded-md"
+              >
                 Update Profile
               </Button>
+
             </form>
           </Form>
         </CardContent>
       </Card>
+
       <div className="w-full max-w-2xl mt-8">
         <MotivationBoostCard />
       </div>
