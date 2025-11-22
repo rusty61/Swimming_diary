@@ -1,163 +1,137 @@
-import React, { useState } from "react";
-import { useAuth } from "@/auth/AuthContext";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
-import MotivationBoostCard from "@/components/MotivationBoostCard"; // Import MotivationBoostCard
+// src/components/Auth/LoginForm.tsx
+"use client";
 
-type Mode = "signin" | "signup";
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { supabase } from "@/lib/supabaseClient";
+import { showError, showSuccess } from "@/utils/toast";
 
 export const LoginForm: React.FC = () => {
-  const { signIn, signUp, loading } = useAuth();
-  const navigate = useNavigate(); // Initialize useNavigate
-  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setMessage(null);
-    setAuthError(null);
-    setSubmitting(true);
-
-    const trimmedEmail = email.trim();
-    const trimmedPassword = password.trim();
-
-    if (!trimmedEmail || !trimmedPassword) {
-      setAuthError("Email and password are required.");
-      setSubmitting(false);
+    if (!email || !password) {
+      showError("Please enter email and password");
       return;
     }
 
-    let result;
-    if (mode === "signin") {
-      result = await signIn(trimmedEmail, trimmedPassword);
-      if (result.error) {
-        setAuthError(result.error);
-      } else {
-        setMessage("Signed in successfully.");
-        navigate("/"); // Navigate to root after successful sign-in
-      }
-    } else {
-      result = await signUp(trimmedEmail, trimmedPassword);
-      if (result.error) {
-        setAuthError(result.error);
-      } else {
-        setMessage("Signed up. Check your email if confirmation is required.");
-        navigate("/"); // Navigate to root after successful sign-up
-      }
-    }
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    setSubmitting(false);
-  };
+      if (error) throw error;
+      showSuccess("Logged in");
+    } catch (err: any) {
+      showError(err?.message ?? "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <div className="auth-page flex flex-col justify-center items-center p-4">
-      <Card className="auth-card mb-8">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-accent">
-            {mode === "signin" ? "Log in" : "Create an account"}
-          </CardTitle>
-          <CardDescription className="text-text-muted mt-2">
-            {mode === "signin" ? "Welcome back! Please sign in to continue." : "Join us! Create your account to get started."}
+    <div className="w-full flex justify-center px-4">
+      <Card className="w-full max-w-md bg-black/50 border-white/10 backdrop-blur-md rounded-3xl shadow-xl">
+        <CardHeader className="text-center pt-8">
+          <CardTitle className="text-3xl font-bold text-green-400">Log in</CardTitle>
+          <CardDescription className="text-muted-foreground text-base">
+            Welcome back! Please sign in to continue.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label
-                htmlFor="email"
-                className="block mb-1 font-medium text-text-main"
-              >
+
+        <CardContent className="pb-8">
+          <form onSubmit={onSubmit} className="space-y-6">
+            {/* EMAIL */}
+            <div className="space-y-2 w-full">
+              <Label htmlFor="email" className="text-white text-lg">
                 Email
-              </label>
+              </Label>
               <Input
                 id="email"
                 type="email"
                 autoComplete="email"
+                placeholder="you@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={submitting || loading}
-                className="auth-input"
+                className="
+                  w-full
+                  h-14
+                  rounded-full
+                  bg-yellow-50/95
+                  text-black
+                  text-lg
+                  px-6
+                  border-0
+                  focus-visible:ring-2
+                  focus-visible:ring-green-400
+                "
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block mb-1 font-medium text-text-main"
-              >
+            {/* PASSWORD */}
+            <div className="space-y-2 w-full">
+              <Label htmlFor="password" className="text-white text-lg">
                 Password
-              </label>
+              </Label>
               <Input
                 id="password"
                 type="password"
-                autoComplete={
-                  mode === "signin" ? "current-password" : "new-password"
-                }
+                autoComplete="current-password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={submitting || loading}
-                className="auth-input"
+                className="
+                  w-full
+                  h-14
+                  rounded-full
+                  bg-yellow-50/95
+                  text-black
+                  text-lg
+                  px-6
+                  border-0
+                  focus-visible:ring-2
+                  focus-visible:ring-green-400
+                "
               />
             </div>
 
-            {(authError || message) && (
-              <div className="mb-3 text-sm text-center">
-                {authError && <div className="text-destructive">{authError}</div>}
-                {message && <div className="text-accent-soft">{message}</div>}
-              </div>
-            )}
-
             <Button
               type="submit"
-              disabled={submitting || loading}
-              className="auth-button-primary"
+              disabled={loading}
+              className="
+                w-full
+                h-14
+                rounded-full
+                text-lg
+                font-semibold
+                bg-green-500/80
+                hover:bg-green-500
+                text-black
+                shadow-lg
+              "
             >
-              {submitting || loading
-                ? "Working…"
-                : mode === "signin"
-                ? "Log in"
-                : "Sign up"}
+              {loading ? "Logging in..." : "LOG IN"}
             </Button>
-          </form>
 
-          <div className="mt-4 text-sm text-text-muted text-center">
-            {mode === "signin" ? (
-              <>
-                Don&apos;t have an account?{" "}
-                <Button
-                  variant="link"
-                  onClick={() => setMode("signup")}
-                  disabled={submitting || loading}
-                  className="auth-link p-0 h-auto"
-                >
-                  Sign up
-                </Button>
-              </>
-            ) : (
-              <>
-                Already have an account?{" "}
-                <Button
-                  variant="link"
-                  onClick={() => setMode("signin")}
-                  disabled={submitting || loading}
-                  className="auth-link p-0 h-auto"
-                >
-                  Log in
-                </Button>
-              </>
-            )}
-          </div>
+            <div className="text-center text-muted-foreground pt-2">
+              Don&apos;t have an account?{" "}
+              <a href="/signup" className="text-green-400 hover:underline">
+                Sign up
+              </a>
+            </div>
+          </form>
         </CardContent>
       </Card>
-      <div className="w-full max-w-md">
-        <MotivationBoostCard />
-      </div>
     </div>
   );
 };
+
+export default LoginForm;
