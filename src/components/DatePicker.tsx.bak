@@ -1,4 +1,3 @@
-// src/components/DatePicker.tsx
 "use client";
 
 import * as React from "react";
@@ -16,49 +15,38 @@ import {
 
 interface DatePickerProps {
   selectedDate: Date;
-  onDateChange: (date: Date | undefined) => void;
+  onDateChange: (date: Date) => void;
   className?: string;
-  disabled?: boolean;
 }
 
-export const DatePicker: React.FC<DatePickerProps> = ({
-  selectedDate,
-  onDateChange,
-  className,
-  disabled,
-}) => {
+export function DatePicker({ selectedDate, onDateChange, className }: DatePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          disabled={disabled}
+          variant={"outline"}
           className={cn(
-            "w-[240px] justify-start text-left font-normal rounded-2xl border border-white/10 bg-background/50",
+            "w-[280px] justify-start text-left font-normal bg-input text-foreground border-border",
             !selectedDate && "text-muted-foreground",
             className
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4 opacity-70" />
+          <CalendarIcon className="mr-2 h-4 w-4" />
           {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
-
-      <PopoverContent
-        className="w-auto p-0 bg-background text-foreground border border-white/10 rounded-2xl"
-        align="start"
-      >
+      <PopoverContent className="w-auto p-0 bg-white text-gray-900 border-border" align="start">
         <Calendar
           mode="single"
           selected={selectedDate}
           onSelect={onDateChange}
-          // v8-safe: no captionLayout/fromYear/toYear
           initialFocus
           className="calendar-red-dates"
+          captionLayout="dropdown"
+          fromYear={1900}
+          toYear={new Date().getFullYear()}
         />
       </PopoverContent>
     </Popover>
   );
-};
-
-export default DatePicker;
+}
