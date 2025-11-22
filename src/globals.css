@@ -113,12 +113,13 @@
   }
 
   /* Text inputs on dark background */
-  .auth-input {
-    @apply w-full rounded-xl border px-3 py-2 text-sm outline-none;
+   .auth-input {
+    @apply w-full h-14 rounded-full border px-6 text-lg outline-none;
     border-color: rgba(148, 163, 184, 0.4);
     background: rgba(10, 17, 35, 0.95);
-    color: var(--text-main);
-  }
+   color: var(--text-main);
+   }
+
   .auth-input::placeholder { color: rgba(148, 163, 184, 0.7); }
   .auth-input:focus {
     border-color: var(--accent);
