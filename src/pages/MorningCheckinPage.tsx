@@ -1,7 +1,10 @@
+// src/pages/MorningCheckinPage.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { parseISO, isValid } from "date-fns";
+
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/DatePicker";
 import InteractiveMoodCard from "@/components/InteractiveMoodCard";
@@ -12,20 +15,26 @@ import {
   fetchEntryForDate,
   upsertDailyEntry,
   fetchAllEntriesForUser,
-  DailyEntry,
 } from "@/data/dailyEntriesSupabase";
-import { parseISO, isValid } from "date-fns";
 
 type WeeklyStats = {
   sessions: number;
   distanceKm: number;
-  avgMood: number | null;
+  avgMood: number;
 };
 
+const toDateOnlyString = (d: Date) => {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+// Monday-start local week
 const startOfWeekLocal = (d: Date) => {
   const date = new Date(d);
   const day = date.getDay(); // 0 Sun ... 6 Sat
-  const diff = (day === 0 ? -6 : 1) - day; // Monday-start week
+  const diff = (day === 0 ? -6 : 1) - day; // move to Monday
   date.setDate(date.getDate() + diff);
   date.setHours(0, 0, 0, 0);
   return date;
@@ -49,38 +58,37 @@ const MorningCheckinPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [mood, setMood] = useState<number | null>(null);
   const [heartRate, setHeartRate] = useState<number | null>(null);
+
   const [loading, setLoading] = useState(false);
+  const [loadingWeekly, setLoadingWeekly] = useState(false);
 
   const [weekly, setWeekly] = useState<WeeklyStats>({
     sessions: 0,
     distanceKm: 0,
-    avgMood: null,
+    avgMood: 0,
   });
-  const [loadingWeekly, setLoadingWeekly] = useState(false);
 
-  const dateStr = useMemo(
-    () => selectedDate.toISOString().slice(0, 10),
-    [selectedDate]
-  );
+  const dateStr = useMemo(() => toDateOnlyString(selectedDate), [selectedDate]);
 
-  // ---- Load daily entry for chosen date ----
+  // Load daily entry for chosen date
   useEffect(() => {
     if (!user?.id) return;
 
     const loadForDate = async () => {
       setLoading(true);
       try {
-        const entry = await fetchEntryForDate(user.id, dateStr);
+        const entry = await fetchEntryForDate(user.id, selectedDate);
         if (entry) {
-          setMood(entry.mood ?? null);
-          setHeartRate(entry.heartRate ?? null);
+          setMood(typeof entry.mood === "number" ? entry.mood : null);
+          setHeartRate(
+            typeof entry.heartRate === "number" ? entry.heartRate : null
+          );
         } else {
           setMood(null);
           setHeartRate(null);
         }
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : String(e);
-        console.error(message);
+      } catch (e) {
+        console.error(e);
         showError("Could not load check-in for that date.");
       } finally {
         setLoading(false);
@@ -88,20 +96,19 @@ const MorningCheckinPage: React.FC = () => {
     };
 
     loadForDate();
-  }, [user?.id, dateStr]);
+  }, [user?.id, selectedDate]);
 
-  // ---- Weekly stats (live + historical) ----
+  // Weekly stats for selected week
   useEffect(() => {
     if (!user?.id) return;
 
-    const fetchWeeklyStats = async () => {
+    const loadWeekly = async () => {
       setLoadingWeekly(true);
       try {
-        const allEntries: DailyEntry[] = await fetchAllEntriesForUser(user.id);
+        const allEntries = await fetchAllEntriesForUser(user.id);
 
-        const now = new Date();
-        const weekStart = startOfWeekLocal(now);
-        const weekEnd = endOfWeekLocalExclusive(now);
+        const weekStart = startOfWeekLocal(selectedDate);
+        const weekEnd = endOfWeekLocalExclusive(selectedDate);
 
         let sessions = 0;
         let distanceKm = 0;
@@ -116,7 +123,7 @@ const MorningCheckinPage: React.FC = () => {
 
           if (typeof e.trainingVolume === "number" && e.trainingVolume > 0) {
             sessions++;
-            distanceKm += e.trainingVolume; // km
+            distanceKm += e.trainingVolume;
           }
 
           if (typeof e.mood === "number") {
@@ -125,39 +132,51 @@ const MorningCheckinPage: React.FC = () => {
           }
         }
 
-        const avgMood = moodCount > 0 ? moodSum / moodCount : null;
-
-        setWeekly({ sessions, distanceKm, avgMood });
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : String(e);
-        console.error("Weekly stats fetch failed:", message);
-        setWeekly({ sessions: 0, distanceKm: 0, avgMood: null });
+        setWeekly({
+          sessions,
+          distanceKm,
+          avgMood: moodCount ? moodSum / moodCount : 0,
+        });
+      } catch (e) {
+        console.error(e);
+        showError("Could not load weekly totals.");
       } finally {
         setLoadingWeekly(false);
       }
     };
 
-    fetchWeeklyStats();
-  }, [user?.id]);
+    loadWeekly();
+  }, [user?.id, selectedDate]);
 
   const handleSave = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      showError("Not signed in.");
+      return;
+    }
 
     setLoading(true);
     try {
       await upsertDailyEntry(user.id, {
-        date: dateStr,
+        date: selectedDate,
         mood: mood ?? undefined,
-        heartRate: heartRate ?? undefined,
+        heartRate: heartRate ?? null,
       });
-
-      showSuccess("Morning check-in saved.");
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      console.error(message);
-      showError("Save failed. Check connection / RLS.");
+      showSuccess("Check-in updated.");
+    } catch (e) {
+      console.error(e);
+      showError("Save failed.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate("/login");
+    } catch (e) {
+      console.error(e);
+      showError("Logout failed.");
     }
   };
 
@@ -178,18 +197,25 @@ const MorningCheckinPage: React.FC = () => {
             >
               How it works
             </Button>
-            <Button variant="ghost" onClick={signOut}>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/landing")}
+              className="rounded-full"
+            >
+              Home
+            </Button>
+            <Button onClick={handleLogout} className="rounded-full">
               Logout
             </Button>
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground md:text-base">
+        <p className="mt-2 text-sm text-muted-foreground md:text-base">
           Log how you feel and your heart rate once per day. Use Log for distance
           and notes after training.
         </p>
 
-        {/* MOTIVATION CARD (fixed style) */}
+        {/* MOTIVATION CARD */}
         <section className="mt-6">
           <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl">
             <div className="text-center text-sm italic text-muted-foreground md:text-base">
@@ -200,7 +226,10 @@ const MorningCheckinPage: React.FC = () => {
 
         {/* DATE + SAVE */}
         <section className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <DatePicker value={selectedDate} onChange={setSelectedDate} />
+          <DatePicker
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+          />
           <Button
             onClick={handleSave}
             disabled={loading}
@@ -215,16 +244,16 @@ const MorningCheckinPage: React.FC = () => {
           <InteractiveMoodCard
             mood={mood}
             onMoodChange={setMood}
-            disabled={loading}
+            date={dateStr}
           />
           <HeartRateCard
             heartRate={heartRate}
             onHeartRateChange={setHeartRate}
-            disabled={loading}
+            date={dateStr}
           />
         </section>
 
-        {/* WEEKLY SUMMARY CARD (added) */}
+        {/* WEEKLY TOTALS */}
         <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl md:col-span-1">
             <div className="text-base font-semibold">This week so far</div>
@@ -247,11 +276,7 @@ const MorningCheckinPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Avg mood</span>
                 <span className="font-semibold">
-                  {loadingWeekly
-                    ? "…"
-                    : weekly.avgMood == null
-                    ? "—"
-                    : weekly.avgMood.toFixed(1)}
+                  {loadingWeekly ? "…" : weekly.avgMood.toFixed(1)}
                 </span>
               </div>
             </div>

@@ -1,155 +1,270 @@
-// src/pages/MorningCheckinPage.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/DatePicker";
 import InteractiveMoodCard from "@/components/InteractiveMoodCard";
 import HeartRateCard from "@/components/HeartRateCard";
-import MotivationBoostCard from "@/components/MotivationBoostCard";
-import { DatePicker } from "@/components/DatePicker";
 import { useAuth } from "@/auth/AuthContext";
 import { showError, showSuccess } from "@/utils/toast";
-import { MoodValue } from "@/components/MoodSelector";
+import {
+  fetchEntryForDate,
+  upsertDailyEntry,
+  fetchAllEntriesForUser,
+  DailyEntry,
+} from "@/data/dailyEntriesSupabase";
+import { parseISO, isValid } from "date-fns";
+
+type WeeklyStats = {
+  sessions: number;
+  distanceKm: number;
+  avgMood: number | null;
+};
+
+const startOfWeekLocal = (d: Date) => {
+  const date = new Date(d);
+  const day = date.getDay(); // 0 Sun ... 6 Sat
+  const diff = (day === 0 ? -6 : 1) - day; // Monday-start week
+  date.setDate(date.getDate() + diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const endOfWeekLocalExclusive = (d: Date) => {
+  const s = startOfWeekLocal(d);
+  const e = new Date(s);
+  e.setDate(e.getDate() + 7);
+  e.setHours(0, 0, 0, 0);
+  return e;
+};
+
+const inInterval = (dt: Date, start: Date, endExclusive: Date) =>
+  dt >= start && dt < endExclusive;
 
 const MorningCheckinPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [dataVersion, setDataVersion] = useState(0);
+  const [mood, setMood] = useState<number | null>(null);
+  const [heartRate, setHeartRate] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleMoodChange = (mood: MoodValue | null) => {
-    console.log("Mood changed to:", mood);
-  };
+  const [weekly, setWeekly] = useState<WeeklyStats>({
+    sessions: 0,
+    distanceKm: 0,
+    avgMood: null,
+  });
+  const [loadingWeekly, setLoadingWeekly] = useState(false);
 
-  const applyDateSelection = () => {
-    setDataVersion((v) => v + 1);
-  };
+  const dateStr = useMemo(
+    () => selectedDate.toISOString().slice(0, 10),
+    [selectedDate]
+  );
 
-  const handleDataSaved = () => {
-    setDataVersion((v) => v + 1);
-  };
+  // ---- Load daily entry for chosen date ----
+  useEffect(() => {
+    if (!user?.id) return;
 
-  const handleLogout = async () => {
+    const loadForDate = async () => {
+      setLoading(true);
+      try {
+        const entry = await fetchEntryForDate(user.id, dateStr);
+        if (entry) {
+          setMood(entry.mood ?? null);
+          setHeartRate(entry.heartRate ?? null);
+        } else {
+          setMood(null);
+          setHeartRate(null);
+        }
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.error(message);
+        showError("Could not load check-in for that date.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadForDate();
+  }, [user?.id, dateStr]);
+
+  // ---- Weekly stats (live + historical) ----
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchWeeklyStats = async () => {
+      setLoadingWeekly(true);
+      try {
+        const allEntries: DailyEntry[] = await fetchAllEntriesForUser(user.id);
+
+        const now = new Date();
+        const weekStart = startOfWeekLocal(now);
+        const weekEnd = endOfWeekLocalExclusive(now);
+
+        let sessions = 0;
+        let distanceKm = 0;
+        let moodSum = 0;
+        let moodCount = 0;
+
+        for (const e of allEntries) {
+          if (!e.date) continue;
+          const dt = parseISO(e.date);
+          if (!isValid(dt)) continue;
+          if (!inInterval(dt, weekStart, weekEnd)) continue;
+
+          if (typeof e.trainingVolume === "number" && e.trainingVolume > 0) {
+            sessions++;
+            distanceKm += e.trainingVolume; // km
+          }
+
+          if (typeof e.mood === "number") {
+            moodSum += e.mood;
+            moodCount++;
+          }
+        }
+
+        const avgMood = moodCount > 0 ? moodSum / moodCount : null;
+
+        setWeekly({ sessions, distanceKm, avgMood });
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.error("Weekly stats fetch failed:", message);
+        setWeekly({ sessions: 0, distanceKm: 0, avgMood: null });
+      } finally {
+        setLoadingWeekly(false);
+      }
+    };
+
+    fetchWeeklyStats();
+  }, [user?.id]);
+
+  const handleSave = async () => {
+    if (!user?.id) return;
+
+    setLoading(true);
     try {
-      await signOut();
-      showSuccess("You have been logged out.");
-      navigate("/login");
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "An unexpected error occurred during logout.";
-      showError(`An unexpected error occurred during logout: ${message}`);
-      console.error("Unexpected logout error:", error);
+      await upsertDailyEntry(user.id, {
+        date: dateStr,
+        mood: mood ?? undefined,
+        heartRate: heartRate ?? undefined,
+      });
+
+      showSuccess("Morning check-in saved.");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.error(message);
+      showError("Save failed. Check connection / RLS.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative">
-      <div className="max-w-5xl mx-auto py-8 z-10 relative px-4">
-        {/* ===== Top header ===== */}
-        <header className="mb-6 space-y-3">
-          {/* Row 1: title + actions */}
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="text-3xl sm:text-4xl font-semibold text-text-main">
-              Morning Check-in
-            </h1>
+    <main className="min-h-screen w-full bg-background text-foreground">
+      <div className="mx-auto max-w-5xl px-4 py-8">
+        {/* HEADER */}
+        <div className="mb-2 flex items-center justify-between">
+          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
+            Morning Check-in
+          </h1>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/help")}
-                className="text-xs"
-              >
-                How it works
-              </Button>
-              <Button
-                onClick={handleLogout}
-                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-4 py-2 rounded-md"
-              >
-                Logout
-              </Button>
-            </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/help")}
+              className="rounded-full"
+            >
+              How it works
+            </Button>
+            <Button variant="ghost" onClick={signOut}>
+              Logout
+            </Button>
           </div>
-
-          {/* Row 2: short subtitle */}
-          <p className="text-sm text-muted-foreground">
-            Log how you feel and your heart rate once per day. Use Log for distance and notes after training.
-          </p>
-        </header>
-
-        {/* Motivation Boost Card */}
-        <div className="mb-8">
-          <MotivationBoostCard />
         </div>
 
-        {/* ===== Main content ===== */}
-        <main className="pb-24">
-          {/* Header row: Daily Entry, date, Update (desktop only) */}
-          <div className="mt-2 mb-4 grid grid-cols-1 gap-4 md:grid-cols-4 items-center">
-            {/* 1. Heading */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-start gap-1">
-              <h2 className="text-2xl sm:text-3xl font-semibold text-text-main">
-             </h2>
-              {/*
-              <p className="text-xs text-muted-foreground">
-               Mood &amp; heart rate
-               </p>
-               */}
-             </div>
+        <p className="text-sm text-muted-foreground md:text-base">
+          Log how you feel and your heart rate once per day. Use Log for distance
+          and notes after training.
+        </p>
 
-            {/* 2. Date picker */}
-            <div className="flex justify-center">
-              <DatePicker
-                selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
-              />
+        {/* MOTIVATION CARD (fixed style) */}
+        <section className="mt-6">
+          <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl">
+            <div className="text-center text-sm italic text-muted-foreground md:text-base">
+              “Consistency beats intensity when intensity only shows up sometimes.”
             </div>
-
-            {/* 3. Update (desktop/tablet) */}
-            <div className="hidden md:flex justify-center">
-              <button
-                onClick={applyDateSelection}
-                className="px-8 py-3 text-sm font-semibold tracking-[0.14em] uppercase bg-primary text-primary-foreground border border-accent-strong shadow-[0_14px_35px_rgba(0,0,0,0.7)] hover:bg-accent-strong transition rounded-md"
-              >
-                Update
-              </button>
-            </div>
-
-            {/* 4. Spacer (for grid balance) */}
-            <div className="hidden md:block" />
           </div>
+        </section>
 
-          {/* Mood + HR cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-stretch">
-            <InteractiveMoodCard
-              selectedDate={selectedDate}
-              onMoodChange={handleMoodChange}
-              onSaved={handleDataSaved}
-              className="h-full"
-            />
-            <HeartRateCard
-              selectedDate={selectedDate}
-              onSaved={handleDataSaved}
-              className="h-full"
-            />
-          </div>
-        </main>
-
-        {/* Mobile sticky Update button */}
-        <div className="fixed inset-x-0 bottom-16 z-30 px-4 md:hidden">
-          <button
-            onClick={applyDateSelection}
-            className="w-full px-8 py-3 text-sm font-semibold tracking-[0.14em] uppercase bg-primary text-primary-foreground border border-accent-strong shadow-[0_14px_35px_rgba(0,0,0,0.7)] hover:bg-accent-strong transition rounded-md"
+        {/* DATE + SAVE */}
+        <section className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <DatePicker value={selectedDate} onChange={setSelectedDate} />
+          <Button
+            onClick={handleSave}
+            disabled={loading}
+            className="rounded-full px-8"
           >
-            Update
-          </button>
-        </div>
+            {loading ? "Saving…" : "Update"}
+          </Button>
+        </section>
+
+        {/* MAIN CARDS */}
+        <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <InteractiveMoodCard
+            mood={mood}
+            onMoodChange={setMood}
+            disabled={loading}
+          />
+          <HeartRateCard
+            heartRate={heartRate}
+            onHeartRateChange={setHeartRate}
+            disabled={loading}
+          />
+        </section>
+
+        {/* WEEKLY SUMMARY CARD (added) */}
+        <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl md:col-span-1">
+            <div className="text-base font-semibold">This week so far</div>
+
+            <div className="mt-3 space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Sessions</span>
+                <span className="font-semibold">
+                  {loadingWeekly ? "…" : weekly.sessions}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Distance</span>
+                <span className="font-semibold">
+                  {loadingWeekly ? "…" : weekly.distanceKm.toFixed(2)} km
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Avg mood</span>
+                <span className="font-semibold">
+                  {loadingWeekly
+                    ? "…"
+                    : weekly.avgMood == null
+                    ? "—"
+                    : weekly.avgMood.toFixed(1)}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 text-xs text-muted-foreground">
+              Live totals pulled from your Supabase diary_entries store.
+            </div>
+          </div>
+
+          <div className="hidden md:block md:col-span-2" />
+        </section>
       </div>
-    </div>
+    </main>
   );
 };
 
