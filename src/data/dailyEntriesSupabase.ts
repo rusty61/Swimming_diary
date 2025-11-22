@@ -1,3 +1,4 @@
+// src/data/dailyEntriesSupabase.ts
 import { format, parseISO, isValid } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,28 +28,77 @@ type DailyEntryRow = {
   updated_at?: string;
 };
 
+/* ----------------- SAFE DATE HELPERS ----------------- */
+
+/** Normalize any Date|string into "yyyy-MM-dd". Returns null if invalid. */
+const normalizeToDateStr = (d: Date | string): string | null => {
+  if (d instanceof Date) {
+    if (isNaN(d.getTime())) return null;
+    return format(d, "yyyy-MM-dd");
+  }
+  if (typeof d !== "string" || !d.trim()) return null;
+
+  // already date-only
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+
+  // try ISO parse
+  try {
+    const dt = parseISO(d);
+    if (isValid(dt)) return format(dt, "yyyy-MM-dd");
+  } catch {
+    // ignore
+  }
+
+  // last resort Date()
+  const dt2 = new Date(d);
+  if (!isNaN(dt2.getTime())) return format(dt2, "yyyy-MM-dd");
+
+  return null;
+};
+
+/** Safe parse ISO. Returns null instead of throwing. */
+const safeParseISO = (s: string): Date | null => {
+  try {
+    const d = parseISO(s);
+    return isValid(d) ? d : null;
+  } catch {
+    return null;
+  }
+};
+
 /**
  * Normalize a raw row from Supabase into our DailyEntry shape.
+ * Returns null if date invalid.
  */
-const mapRowToDailyEntry = (row: DailyEntryRow): DailyEntry => ({
-  id: row.id,
-  userId: row.user_id,
-  date: row.date,
-  mood: row.mood ?? 0,
-  heartRate: row.heart_rate ?? null,
-  trainingVolume:
-    row.training_volume !== null && row.training_volume !== undefined
-      ? Number(row.training_volume)
-      : null,
-  notes: row.notes ?? "",
-  periodSymptoms: row.period_symptoms ?? undefined,
-  createdAt: row.created_at ?? undefined,
-  updatedAt: row.updated_at ?? undefined,
-});
+const mapRowToDailyEntry = (row: DailyEntryRow): DailyEntry | null => {
+  const normDate = normalizeToDateStr(row.date);
+  if (!normDate) {
+    console.warn("[dailyEntries] skipping invalid date row:", row.date, row);
+    return null;
+  }
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    date: normDate,
+    mood: row.mood ?? 0,
+    heartRate: row.heart_rate ?? null,
+    trainingVolume:
+      row.training_volume !== null && row.training_volume !== undefined
+        ? Number(row.training_volume)
+        : null,
+    notes: row.notes ?? "",
+    periodSymptoms: row.period_symptoms ?? undefined,
+    createdAt: row.created_at ?? undefined,
+    updatedAt: row.updated_at ?? undefined,
+  };
+};
+
+/* ----------------- API ----------------- */
 
 /**
  * Fetch ALL entries for a user.
- * For a normal diary this is fine (small dataset); we can filter in TS.
+ * Bad-date rows are skipped instead of crashing.
  */
 export const fetchAllEntriesForUser = async (
   userId: string
@@ -64,19 +114,24 @@ export const fetchAllEntriesForUser = async (
     throw new Error(error.message);
   }
 
-  return (data ?? [])
-    .filter((row) => typeof row.date === "string" && isValid(parseISO(row.date)))
-    .map(mapRowToDailyEntry);
+  const out: DailyEntry[] = [];
+  for (const row of (data ?? []) as DailyEntryRow[]) {
+    const mapped = mapRowToDailyEntry(row);
+    if (mapped) out.push(mapped);
+  }
+  return out;
 };
 
 /**
  * Get entry for a specific date (YYYY-MM-DD).
+ * Accepts Date OR string safely.
  */
 export const fetchEntryForDate = async (
   userId: string,
-  date: Date
+  date: Date | string
 ): Promise<DailyEntry | null> => {
-  const dateStr = format(date, "yyyy-MM-dd");
+  const dateStr = normalizeToDateStr(date);
+  if (!dateStr) return null;
 
   const { data, error } = await supabase
     .from("daily_entries")
@@ -86,13 +141,13 @@ export const fetchEntryForDate = async (
     .maybeSingle();
 
   if (error && error.code !== "PGRST116") {
-    // PGRST116 = no rows returned for single/maybeSingle
     console.error("[dailyEntries] fetchEntryForDate error:", error);
     throw new Error(error.message);
   }
 
   if (!data) return null;
-  return mapRowToDailyEntry(data);
+
+  return mapRowToDailyEntry(data as DailyEntryRow);
 };
 
 export type UpsertDailyEntryInput = {
@@ -111,10 +166,8 @@ export const upsertDailyEntry = async (
   userId: string,
   input: UpsertDailyEntryInput
 ): Promise<DailyEntry> => {
-  const dateStr =
-    input.date instanceof Date
-      ? format(input.date, "yyyy-MM-dd")
-      : input.date;
+  const dateStr = normalizeToDateStr(input.date);
+  if (!dateStr) throw new Error("Invalid date for upsert");
 
   // Load existing row so we can merge instead of nuking fields
   const existing = await fetchEntryForDate(userId, dateStr);
@@ -123,25 +176,21 @@ export const upsertDailyEntry = async (
     user_id: userId,
     date: dateStr,
 
-    // mood: if caller provided a value, use it; otherwise keep existing; fall back to 0
     mood:
       input.mood !== undefined
         ? input.mood
         : existing?.mood ?? 0,
 
-    // heart_rate: allow explicit null to clear
     heart_rate:
       input.heartRate !== undefined
         ? input.heartRate
         : existing?.heartRate ?? null,
 
-    // training_volume: allow explicit null to clear
     training_volume:
       input.trainingVolume !== undefined
         ? input.trainingVolume
         : existing?.trainingVolume ?? null,
 
-    // notes: allow explicit empty string to clear
     notes:
       input.notes !== undefined
         ? input.notes
@@ -171,13 +220,14 @@ export const upsertDailyEntry = async (
     throw new Error("Upsert succeeded but no row returned.");
   }
 
-  return mapRowToDailyEntry(data);
-};
+  const mapped = mapRowToDailyEntry(data as DailyEntryRow);
+  if (!mapped) throw new Error("Upsert returned invalid date row.");
 
+  return mapped;
+};
 
 /**
  * Get entries (or placeholders) for last N days up to endDate.
- * Missing days are filled with mood=0/null metrics for charting.
  */
 export const fetchEntriesForLastNDays = async (
   userId: string,
@@ -217,10 +267,11 @@ export const fetchEntriesForLastNDays = async (
   return out;
 };
 
-/**
- * Helper: compute start & end of the week (Sunday as start) for a given date.
- */
-const getWeekRange = (currentDate: Date): { startOfWeek: Date; endOfWeek: Date } => {
+/* ----------------- WEEKLY HELPERS (SAFE) ----------------- */
+
+const getWeekRange = (
+  currentDate: Date
+): { startOfWeek: Date; endOfWeek: Date } => {
   const startOfWeek = new Date(currentDate);
   startOfWeek.setDate(currentDate.getDate() - currentDate.getDay()); // Sunday
   startOfWeek.setHours(0, 0, 0, 0);
@@ -232,10 +283,6 @@ const getWeekRange = (currentDate: Date): { startOfWeek: Date; endOfWeek: Date }
   return { startOfWeek, endOfWeek };
 };
 
-/**
- * Total and average training volume for the week of `currentDate`.
- * Average is across days that actually have an entry (not strictly 7 days).
- */
 export const getWeeklyTrainingVolumeFromEntries = (
   allEntries: DailyEntry[],
   currentDate: Date
@@ -243,8 +290,8 @@ export const getWeeklyTrainingVolumeFromEntries = (
   const { startOfWeek, endOfWeek } = getWeekRange(currentDate);
 
   const weeklyEntries = allEntries.filter((entry) => {
-    const d = parseISO(entry.date);
-    return d >= startOfWeek && d <= endOfWeek;
+    const d = safeParseISO(entry.date);
+    return !!d && d >= startOfWeek && d <= endOfWeek;
   });
 
   const total = weeklyEntries.reduce(
@@ -256,17 +303,16 @@ export const getWeeklyTrainingVolumeFromEntries = (
   return { total, average, entries: weeklyEntries };
 };
 
-/**
- * Average heart rate for the week of `currentDate`.
- * Only days with a non-null heartRate are included.
- */
-export const getWeeklyAverageHeartRateFromEntries = (currentDate: Date, allEntries: DailyEntry[]): number => {
+export const getWeeklyAverageHeartRateFromEntries = (
+  currentDate: Date,
+  allEntries: DailyEntry[]
+): number => {
   const { startOfWeek, endOfWeek } = getWeekRange(currentDate);
 
   const weeklyEntries = allEntries.filter((entry) => {
     if (entry.heartRate == null) return false;
-    const entryDate = parseISO(entry.date);
-    return entryDate >= startOfWeek && entryDate <= endOfWeek;
+    const d = safeParseISO(entry.date);
+    return !!d && d >= startOfWeek && d <= endOfWeek;
   });
 
   const totalHr = weeklyEntries.reduce(
@@ -278,17 +324,16 @@ export const getWeeklyAverageHeartRateFromEntries = (currentDate: Date, allEntri
   return parseFloat((totalHr / weeklyEntries.length).toFixed(1));
 };
 
-/**
- * Returns a human-readable summary of mood for the week of `currentDate`.
- * Ignores days where mood === 0 (no data).
- */
-export const getWeeklyMoodTrendFromEntries = (currentDate: Date, allEntries: DailyEntry[]): string => {
+export const getWeeklyMoodTrendFromEntries = (
+  currentDate: Date,
+  allEntries: DailyEntry[]
+): string => {
   const { startOfWeek, endOfWeek } = getWeekRange(currentDate);
 
   const weeklyEntries = allEntries.filter((entry) => {
     if (entry.mood === 0) return false;
-    const entryDate = parseISO(entry.date);
-    return entryDate >= startOfWeek && entryDate <= endOfWeek;
+    const d = safeParseISO(entry.date);
+    return !!d && d >= startOfWeek && d <= endOfWeek;
   });
 
   if (weeklyEntries.length === 0) return "No mood data";
@@ -302,10 +347,6 @@ export const getWeeklyMoodTrendFromEntries = (currentDate: Date, allEntries: Dai
   return "Tough week. 🙁";
 };
 
-/**
- * Average training volume per week over the last `numWeeks` weeks,
- * relative to "today".
- */
 export const getWeeklyTrainingAveragesFromEntries = (
   numWeeks: number,
   allEntries: DailyEntry[]
@@ -320,8 +361,8 @@ export const getWeeklyTrainingAveragesFromEntries = (
     const { startOfWeek, endOfWeek } = getWeekRange(refDate);
 
     const weeklyEntries = allEntries.filter((entry) => {
-      const entryDate = parseISO(entry.date);
-      return entryDate >= startOfWeek && entryDate <= endOfWeek;
+      const d = safeParseISO(entry.date);
+      return !!d && d >= startOfWeek && d <= endOfWeek;
     });
 
     const totalVolume = weeklyEntries.reduce(

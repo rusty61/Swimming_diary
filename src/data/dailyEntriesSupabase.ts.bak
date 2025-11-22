@@ -2,10 +2,10 @@ import { format, parseISO, isValid } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
 export type DailyEntry = {
-  id?: string;                  // Supabase row id
-  userId: string;               // auth.users.id
-  date: string;                 // "YYYY-MM-DD"
-  mood: number;                 // 0..5
+  id?: string; // Supabase row id
+  userId: string; // auth.users.id
+  date: string; // "YYYY-MM-DD"
+  mood: number; // 0..5
   heartRate: number | null;
   trainingVolume: number | null;
   notes: string;
@@ -14,10 +14,23 @@ export type DailyEntry = {
   updatedAt?: string;
 };
 
+type DailyEntryRow = {
+  id?: string;
+  user_id: string;
+  date: string;
+  mood?: number | null;
+  heart_rate?: number | null;
+  training_volume?: number | null;
+  notes?: string | null;
+  period_symptoms?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 /**
  * Normalize a raw row from Supabase into our DailyEntry shape.
  */
-const mapRowToDailyEntry = (row: any): DailyEntry => ({
+const mapRowToDailyEntry = (row: DailyEntryRow): DailyEntry => ({
   id: row.id,
   userId: row.user_id,
   date: row.date,
@@ -103,20 +116,47 @@ export const upsertDailyEntry = async (
       ? format(input.date, "yyyy-MM-dd")
       : input.date;
 
+  // Load existing row so we can merge instead of nuking fields
+  const existing = await fetchEntryForDate(userId, dateStr);
+
   const payload = {
     user_id: userId,
     date: dateStr,
-    mood: input.mood ?? 0,
-    heart_rate: input.heartRate ?? null,
-    training_volume: input.trainingVolume ?? null,
-    notes: input.notes ?? "",
-    period_symptoms: input.periodSymptoms ?? null,
+
+    // mood: if caller provided a value, use it; otherwise keep existing; fall back to 0
+    mood:
+      input.mood !== undefined
+        ? input.mood
+        : existing?.mood ?? 0,
+
+    // heart_rate: allow explicit null to clear
+    heart_rate:
+      input.heartRate !== undefined
+        ? input.heartRate
+        : existing?.heartRate ?? null,
+
+    // training_volume: allow explicit null to clear
+    training_volume:
+      input.trainingVolume !== undefined
+        ? input.trainingVolume
+        : existing?.trainingVolume ?? null,
+
+    // notes: allow explicit empty string to clear
+    notes:
+      input.notes !== undefined
+        ? input.notes
+        : existing?.notes ?? "",
+
+    period_symptoms:
+      input.periodSymptoms !== undefined
+        ? input.periodSymptoms
+        : existing?.periodSymptoms ?? null,
   };
 
   const { data, error } = await supabase
     .from("daily_entries")
     .upsert(payload, {
-      onConflict: "user_id,date", // matches table UNIQUE constraint
+      onConflict: "user_id,date",
       ignoreDuplicates: false,
     })
     .select("*")
@@ -133,6 +173,7 @@ export const upsertDailyEntry = async (
 
   return mapRowToDailyEntry(data);
 };
+
 
 /**
  * Get entries (or placeholders) for last N days up to endDate.
