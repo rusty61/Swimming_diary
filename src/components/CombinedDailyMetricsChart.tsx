@@ -47,6 +47,8 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const userId = user?.id;
+  const selectedDateMs = selectedDate.getTime();
 
   const [chartData, setChartData] = useState<ChartDatum[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +74,7 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setChartData([]);
       setLoading(false);
       return;
@@ -85,7 +87,7 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
         setLoading(true);
 
         const entries: DailyEntry[] = await fetchEntriesForLastNDays(
-          user.id,
+          userId,
           rangeDays,
           selectedDate,
         );
@@ -123,7 +125,7 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [user?.id, selectedDate.getTime(), rangeDays, refreshKey]);
+  }, [userId, selectedDate, selectedDateMs, rangeDays, refreshKey]);
 
   const rangeOptions = [7, 14, 28, 90];
 

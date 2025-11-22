@@ -78,8 +78,9 @@ const MorningCheckinPage: React.FC = () => {
           setMood(null);
           setHeartRate(null);
         }
-      } catch (e: any) {
-        console.error(e);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.error(message);
         showError("Could not load check-in for that date.");
       } finally {
         setLoading(false);
@@ -127,8 +128,9 @@ const MorningCheckinPage: React.FC = () => {
         const avgMood = moodCount > 0 ? moodSum / moodCount : null;
 
         setWeekly({ sessions, distanceKm, avgMood });
-      } catch (e: any) {
-        console.error("Weekly stats fetch failed:", e?.message || e);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.error("Weekly stats fetch failed:", message);
         setWeekly({ sessions: 0, distanceKm: 0, avgMood: null });
       } finally {
         setLoadingWeekly(false);
@@ -150,8 +152,9 @@ const MorningCheckinPage: React.FC = () => {
       });
 
       showSuccess("Morning check-in saved.");
-    } catch (e: any) {
-      console.error(e);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.error(message);
       showError("Save failed. Check connection / RLS.");
     } finally {
       setLoading(false);

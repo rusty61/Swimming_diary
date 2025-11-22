@@ -127,8 +127,9 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
       });
       showSuccess("Daily notes saved");
     },
-    onError: (err: any) => {
-      console.error("Daily notes save error:", err);
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("Daily notes save error:", message);
       showError("Could not save notes. Check console for details.");
     },
   });

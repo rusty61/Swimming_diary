@@ -103,8 +103,9 @@ const Landing: React.FC = () => {
         const avgMood = moodCount > 0 ? moodSum / moodCount : null;
 
         setWeekly({ sessions, distanceKm, avgMood });
-      } catch (err: any) {
-        console.error("Landing weekly stats error:", err?.message || err);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("Landing weekly stats error:", message);
         showError("Weekly stats not loading — Supabase fetch failed.");
         setWeekly({ sessions: 0, distanceKm: 0, avgMood: null });
       } finally {

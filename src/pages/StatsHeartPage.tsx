@@ -29,13 +29,14 @@ type HeartDatum = {
 const StatsHeartPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const userId = user?.id;
 
   const [data, setData] = useState<HeartDatum[]>([]);
   const [loading, setLoading] = useState(true);
   const [rangeDays, setRangeDays] = useState<number>(28);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setData([]);
       setLoading(false);
       return;
@@ -48,7 +49,7 @@ const StatsHeartPage: React.FC = () => {
         setLoading(true);
 
         const entries: DailyEntry[] = await fetchEntriesForLastNDays(
-          user.id,
+          userId,
           rangeDays,
           new Date(),
         );
@@ -89,7 +90,7 @@ const StatsHeartPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, rangeDays]);
+  }, [userId, rangeDays]);
 
   const rangeOptions = [7, 14, 28, 56];
 

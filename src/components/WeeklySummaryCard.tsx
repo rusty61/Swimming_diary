@@ -25,6 +25,8 @@ const WeeklySummaryCard: React.FC<WeeklySummaryCardProps> = ({
   className,
 }) => {
   const { user } = useAuth();
+  const userId = user?.id;
+  const selectedDateMs = selectedDate.getTime();
 
   const [weeklyTotalKm, setWeeklyTotalKm] = useState<number>(0);
   const [weeklyAvgHr, setWeeklyAvgHr] = useState<number | null>(null);
@@ -33,7 +35,7 @@ const WeeklySummaryCard: React.FC<WeeklySummaryCardProps> = ({
 
   useEffect(() => {
     // If there is no logged-in user, clear the card and bail out.
-    if (!user) {
+    if (!userId) {
       setWeeklyTotalKm(0);
       setWeeklyAvgHr(null);
       setWeeklyMoodTrend("");
@@ -48,7 +50,7 @@ const WeeklySummaryCard: React.FC<WeeklySummaryCardProps> = ({
         setLoading(true);
 
         // 1) Get *all* entries for this user
-        const allEntries = await fetchAllEntriesForUser(user.id);
+        const allEntries = await fetchAllEntriesForUser(userId);
         console.log("[WeeklySummaryCard] allEntries:", allEntries);
 
         // 2) Use helpers to derive weekly stats for the week of selectedDate
@@ -95,8 +97,8 @@ const WeeklySummaryCard: React.FC<WeeklySummaryCardProps> = ({
     return () => {
       cancelled = true;
     };
-    // NOTE: use user.id and selectedDate.getTime() so React reliably re-runs
-  }, [user?.id, selectedDate.getTime(), refreshKey]);
+    // NOTE: use stable primitives so React reliably re-runs
+  }, [userId, selectedDate, selectedDateMs, refreshKey]);
 
   return (
     <Card
