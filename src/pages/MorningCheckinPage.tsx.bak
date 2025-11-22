@@ -15,12 +15,13 @@ import {
   fetchEntryForDate,
   upsertDailyEntry,
   fetchAllEntriesForUser,
+  DailyEntry,
 } from "@/data/dailyEntriesSupabase";
 
 type WeeklyStats = {
   sessions: number;
   distanceKm: number;
-  avgMood: number;
+  avgMood: number | null;
 };
 
 const toDateOnlyString = (d: Date) => {
@@ -30,11 +31,10 @@ const toDateOnlyString = (d: Date) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-// Monday-start local week
 const startOfWeekLocal = (d: Date) => {
   const date = new Date(d);
   const day = date.getDay(); // 0 Sun ... 6 Sat
-  const diff = (day === 0 ? -6 : 1) - day; // move to Monday
+  const diff = (day === 0 ? -6 : 1) - day; // Monday start
   date.setDate(date.getDate() + diff);
   date.setHours(0, 0, 0, 0);
   return date;
@@ -65,12 +65,11 @@ const MorningCheckinPage: React.FC = () => {
   const [weekly, setWeekly] = useState<WeeklyStats>({
     sessions: 0,
     distanceKm: 0,
-    avgMood: 0,
+    avgMood: null,
   });
 
   const dateStr = useMemo(() => toDateOnlyString(selectedDate), [selectedDate]);
 
-  // Load daily entry for chosen date
   useEffect(() => {
     if (!user?.id) return;
 
@@ -98,7 +97,6 @@ const MorningCheckinPage: React.FC = () => {
     loadForDate();
   }, [user?.id, selectedDate]);
 
-  // Weekly stats for selected week
   useEffect(() => {
     if (!user?.id) return;
 
@@ -135,7 +133,7 @@ const MorningCheckinPage: React.FC = () => {
         setWeekly({
           sessions,
           distanceKm,
-          avgMood: moodCount ? moodSum / moodCount : 0,
+          avgMood: moodCount ? moodSum / moodCount : null,
         });
       } catch (e) {
         console.error(e);
@@ -183,7 +181,6 @@ const MorningCheckinPage: React.FC = () => {
   return (
     <main className="min-h-screen w-full bg-background text-foreground">
       <div className="mx-auto max-w-5xl px-4 py-8">
-        {/* HEADER */}
         <div className="mb-2 flex items-center justify-between">
           <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
             Morning Check-in
@@ -211,25 +208,15 @@ const MorningCheckinPage: React.FC = () => {
         </div>
 
         <p className="mt-2 text-sm text-muted-foreground md:text-base">
-          Log how you feel and your heart rate once per day. Use Log for distance
-          and notes after training.
+          Log how you feel and your heart rate once per day.
         </p>
 
-        {/* MOTIVATION CARD */}
-        <section className="mt-6">
-          <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl">
-            <div className="text-center text-sm italic text-muted-foreground md:text-base">
-              “Consistency beats intensity when intensity only shows up sometimes.”
-            </div>
-          </div>
-        </section>
-
-        {/* DATE + SAVE */}
         <section className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <DatePicker
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
           />
+
           <Button
             onClick={handleSave}
             disabled={loading}
@@ -239,7 +226,6 @@ const MorningCheckinPage: React.FC = () => {
           </Button>
         </section>
 
-        {/* MAIN CARDS */}
         <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
           <InteractiveMoodCard
             mood={mood}
@@ -253,7 +239,6 @@ const MorningCheckinPage: React.FC = () => {
           />
         </section>
 
-        {/* WEEKLY TOTALS */}
         <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl md:col-span-1">
             <div className="text-base font-semibold">This week so far</div>
@@ -276,7 +261,7 @@ const MorningCheckinPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Avg mood</span>
                 <span className="font-semibold">
-                  {loadingWeekly ? "…" : weekly.avgMood.toFixed(1)}
+                  {loadingWeekly ? "…" : weekly.avgMood?.toFixed(1) ?? "—"}
                 </span>
               </div>
             </div>
@@ -285,8 +270,6 @@ const MorningCheckinPage: React.FC = () => {
               Live totals pulled from your Supabase diary_entries store.
             </div>
           </div>
-
-          <div className="hidden md:block md:col-span-2" />
         </section>
       </div>
     </main>
