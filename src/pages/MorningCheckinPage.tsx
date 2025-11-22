@@ -10,7 +10,7 @@ import DailyNotesCard from "@/components/DailyNotesCard";
 import InteractiveMoodCard from "@/components/InteractiveMoodCard";
 import HeartRateCard from "@/components/HeartRateCard";
 import WeeklySummaryCard from "@/components/WeeklySummaryCard";
-import MotivationBoostCard from "@/components/MotivationBoostCard"; // <-- exists now
+import MotivationBoostCard from "@/components/MotivationBoostCard";
 
 import { useAuth } from "@/auth/AuthContext";
 import { showError, showSuccess } from "@/utils/toast";
@@ -29,7 +29,6 @@ const MorningCheckinPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
 
-  // local yyyy-mm-dd
   const dayKey = useMemo(() => {
     const d = selectedDate ?? new Date();
     const yyyy = d.getFullYear();
@@ -38,7 +37,6 @@ const MorningCheckinPage: React.FC = () => {
     return `${yyyy}-${mm}-${dd}`;
   }, [selectedDate]);
 
-  // load existing check-in for chosen day
   useEffect(() => {
     let cancelled = false;
 
@@ -110,7 +108,6 @@ const MorningCheckinPage: React.FC = () => {
 
   return (
     <main className="shell flex min-h-screen flex-col items-center p-4">
-      {/* header */}
       <div className="w-full max-w-5xl">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="heading-display text-center text-3xl md:text-4xl">
@@ -125,11 +122,7 @@ const MorningCheckinPage: React.FC = () => {
             >
               How it works
             </Button>
-            <Button
-              variant="ghost"
-              className="rounded-full"
-              onClick={signOut}
-            >
+            <Button variant="ghost" className="rounded-full" onClick={signOut}>
               Logout
             </Button>
           </div>
@@ -141,12 +134,10 @@ const MorningCheckinPage: React.FC = () => {
         </p>
       </div>
 
-      {/* motivation quote/card */}
       <div className="mb-6 w-full max-w-5xl">
         <MotivationBoostCard />
       </div>
 
-      {/* date + update */}
       <div className="mb-6 flex w-full max-w-5xl flex-col items-center justify-center gap-3 md:flex-row">
         <DatePicker date={inputDate} onChange={onChangeDate} />
         <Button
@@ -158,7 +149,6 @@ const MorningCheckinPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* main cards */}
       <section className="grid w-full max-w-5xl grid-cols-1 gap-4 md:grid-cols-2">
         <InteractiveMoodCard
           value={mood}
@@ -174,12 +164,11 @@ const MorningCheckinPage: React.FC = () => {
         />
       </section>
 
-      {/* this week so far */}
+      {/* weekly card in your marked zone */}
       <section className="mt-6 w-full max-w-5xl">
-        <WeeklySummaryCard />
+        <WeeklySummaryCard selectedDate={selectedDate} />
       </section>
 
-      {/* notes */}
       <section className="mt-6 w-full max-w-5xl">
         <DailyNotesCard selectedDate={selectedDate} />
       </section>
