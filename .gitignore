@@ -2,3 +2,22 @@
 dist/
 .env
 .env.*
+# --- junk / backups ---
+*.bak
+*.tmp
+*.temp
+*.swp
+*.swo
+*.orig
+*.rej
+*~
+.DS_Store
+Thumbs.db
+
+# --- build / deps ---
+node_modules/
+dist/
+build/
+out/
+.vite/
+.cache/
