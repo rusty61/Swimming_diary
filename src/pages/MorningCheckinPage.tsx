@@ -1,155 +1,193 @@
 // src/pages/MorningCheckinPage.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/DatePicker";
+import DailyNotesCard from "@/components/DailyNotesCard";
 import InteractiveMoodCard from "@/components/InteractiveMoodCard";
 import HeartRateCard from "@/components/HeartRateCard";
-import MotivationBoostCard from "@/components/MotivationBoostCard";
-import { DatePicker } from "@/components/DatePicker";
+import WeeklySummaryCard from "@/components/WeeklySummaryCard";
+import MotivationQuoteCard from "@/components/MotivationQuoteCard"; // your new standardized shared quote card
+
 import { useAuth } from "@/auth/AuthContext";
 import { showError, showSuccess } from "@/utils/toast";
 import { MoodValue } from "@/components/MoodSelector";
+import { supabase } from "@/lib/supabaseClient";
 
 const MorningCheckinPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
 
+  const [inputDate, setInputDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [dataVersion, setDataVersion] = useState(0);
 
-  const handleMoodChange = (mood: MoodValue | null) => {
-    console.log("Mood changed to:", mood);
-  };
+  const [mood, setMood] = useState<MoodValue | null>(null);
+  const [restingHr, setRestingHr] = useState<number | "">("");
 
-  const applyDateSelection = () => {
-    setDataVersion((v) => v + 1);
-  };
+  const [loading, setLoading] = useState(false);
 
-  const handleDataSaved = () => {
-    setDataVersion((v) => v + 1);
-  };
+  // --- helpers
+  const dayKey = useMemo(() => {
+    const d = selectedDate ?? new Date();
+    // local yyyy-mm-dd
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }, [selectedDate]);
 
-  const handleLogout = async () => {
+  // load existing check-in for chosen day
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      if (!user) return;
+
+      try {
+        setLoading(true);
+
+        const { data, error } = await supabase
+          .from("daily_entries")
+          .select("mood, resting_hr")
+          .eq("user_id", user.id)
+          .eq("date", dayKey)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (cancelled) return;
+
+        setMood((data?.mood ?? null) as MoodValue | null);
+        setRestingHr(data?.resting_hr ?? "");
+      } catch (e: any) {
+        console.error(e);
+        showError("Couldn’t load day entry.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, dayKey]);
+
+  const onUpdate = async () => {
+    if (!user) return;
+
     try {
-      await signOut();
-      showSuccess("You have been logged out.");
-      navigate("/login");
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "An unexpected error occurred during logout.";
-      showError(`An unexpected error occurred during logout: ${message}`);
-      console.error("Unexpected logout error:", error);
+      setLoading(true);
+
+      const payload = {
+        user_id: user.id,
+        date: dayKey,
+        mood: mood ?? null,
+        resting_hr: restingHr === "" ? null : Number(restingHr),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from("daily_entries")
+        .upsert(payload, { onConflict: "user_id,date" });
+
+      if (error) throw error;
+
+      showSuccess("Morning check-in saved.");
+    } catch (e: any) {
+      console.error(e);
+      showError("Couldn’t save check-in.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  const onChangeDate = (d: Date) => {
+    setInputDate(d);
+    setSelectedDate(d);
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground relative">
-      <div className="max-w-5xl mx-auto py-8 z-10 relative px-4">
-        {/* ===== Top header ===== */}
-        <header className="mb-6 space-y-3">
-          {/* Row 1: title + actions */}
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="text-3xl sm:text-4xl font-semibold text-text-main">
-              Morning Check-in
-            </h1>
+    <main className="shell flex min-h-screen flex-col items-center p-4">
+      {/* header */}
+      <div className="w-full max-w-5xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="heading-display text-center text-3xl md:text-4xl">
+            Morning Check-in
+          </h1>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/help")}
-                className="text-xs"
-              >
-                How it works
-              </Button>
-              <Button
-                onClick={handleLogout}
-                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-4 py-2 rounded-md"
-              >
-                Logout
-              </Button>
-            </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              className="rounded-full"
+              onClick={() => navigate("/how-it-works")}
+            >
+              How it works
+            </Button>
+            <Button
+              variant="ghost"
+              className="rounded-full"
+              onClick={signOut}
+            >
+              Logout
+            </Button>
           </div>
-
-          {/* Row 2: short subtitle */}
-          <p className="text-sm text-muted-foreground">
-            Log how you feel and your heart rate once per day. Use Log for distance and notes after training.
-          </p>
-        </header>
-
-        {/* Motivation Boost Card */}
-        <div className="mb-8">
-          <MotivationBoostCard />
         </div>
 
-        {/* ===== Main content ===== */}
-        <main className="pb-24">
-          {/* Header row: Daily Entry, date, Update (desktop only) */}
-          <div className="mt-2 mb-4 grid grid-cols-1 gap-4 md:grid-cols-4 items-center">
-            {/* 1. Heading */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-start gap-1">
-              <h2 className="text-2xl sm:text-3xl font-semibold text-text-main">
-             </h2>
-              {/*
-              <p className="text-xs text-muted-foreground">
-               Mood &amp; heart rate
-               </p>
-               */}
-             </div>
-
-            {/* 2. Date picker */}
-            <div className="flex justify-center">
-              <DatePicker
-                selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
-              />
-            </div>
-
-            {/* 3. Update (desktop/tablet) */}
-            <div className="hidden md:flex justify-center">
-              <button
-                onClick={applyDateSelection}
-                className="px-8 py-3 text-sm font-semibold tracking-[0.14em] uppercase bg-primary text-primary-foreground border border-accent-strong shadow-[0_14px_35px_rgba(0,0,0,0.7)] hover:bg-accent-strong transition rounded-md"
-              >
-                Update
-              </button>
-            </div>
-
-            {/* 4. Spacer (for grid balance) */}
-            <div className="hidden md:block" />
-          </div>
-
-          {/* Mood + HR cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-stretch">
-            <InteractiveMoodCard
-              selectedDate={selectedDate}
-              onMoodChange={handleMoodChange}
-              onSaved={handleDataSaved}
-              className="h-full"
-            />
-            <HeartRateCard
-              selectedDate={selectedDate}
-              onSaved={handleDataSaved}
-              className="h-full"
-            />
-          </div>
-        </main>
-
-        {/* Mobile sticky Update button */}
-        <div className="fixed inset-x-0 bottom-16 z-30 px-4 md:hidden">
-          <button
-            onClick={applyDateSelection}
-            className="w-full px-8 py-3 text-sm font-semibold tracking-[0.14em] uppercase bg-primary text-primary-foreground border border-accent-strong shadow-[0_14px_35px_rgba(0,0,0,0.7)] hover:bg-accent-strong transition rounded-md"
-          >
-            Update
-          </button>
-        </div>
+        <p className="mb-6 text-sm text-muted-foreground">
+          Log how you feel and your heart rate once per day. Use Log for distance
+          and notes after training.
+        </p>
       </div>
-    </div>
+
+      {/* motivation quote (shared standard card) */}
+      <div className="mb-6 w-full max-w-5xl">
+        <MotivationQuoteCard />
+      </div>
+
+      {/* date + update */}
+      <div className="mb-6 flex w-full max-w-5xl flex-col items-center justify-center gap-3 md:flex-row">
+        <DatePicker date={inputDate} onChange={onChangeDate} />
+        <Button
+          onClick={onUpdate}
+          disabled={loading}
+          className="min-w-[140px] rounded-full border border-emerald-500/40 bg-transparent text-white hover:bg-emerald-500/10"
+        >
+          {loading ? "Saving..." : "UPDATE"}
+        </Button>
+      </div>
+
+      {/* main cards */}
+      <section className="grid w-full max-w-5xl grid-cols-1 gap-4 md:grid-cols-2">
+        <InteractiveMoodCard
+          value={mood}
+          onChange={(v) => setMood(v)}
+          title="Daily Mood"
+        />
+
+        <HeartRateCard
+          value={restingHr}
+          onChange={(v) => setRestingHr(v)}
+          title="Heart Rate (BPM)"
+          placeholder="Enter BPM"
+        />
+      </section>
+
+      {/* ✅ THIS WEEK SO FAR card goes here (full width) */}
+      <section className="mt-6 w-full max-w-5xl">
+        <WeeklySummaryCard />
+      </section>
+
+      {/* notes / extras (if you want them on today page) */}
+      <section className="mt-6 w-full max-w-5xl">
+        <DailyNotesCard selectedDate={selectedDate} />
+      </section>
+
+      {/* bottom spacing */}
+      <div className="h-10" />
+    </main>
   );
 };
 
