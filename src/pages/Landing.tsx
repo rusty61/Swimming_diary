@@ -1,19 +1,21 @@
+// src/pages/Landing.tsx
+"use client";
+
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/auth/AuthContext";
+import { Button } from "@/components/ui/button";
+import { fetchAllEntriesForUser } from "@/data/dailyEntriesSupabase";
 import { showError } from "@/utils/toast";
-import { fetchAllEntriesForUser, DailyEntry } from "@/data/dailyEntriesSupabase";
-import { parseISO, isValid } from "date-fns";
 
-// ✅ If any button still fails, your routes differ.
-// Fix by changing ONLY these 4 paths to match App.tsx.
+// ---- ROUTES MUST MATCH App.tsx ----
 const ROUTES = {
-  morning: "/morning-checkin",
-  session: "/session-log",
+  morning: "/today",
+  session: "/log",
+  saved: "/log/history",
   stats: "/stats",
-  saved: "/saved-entries",
-  diary: "/diary",
+  profile: "/profile",
+  diary: "/today",
 };
 
 type WeeklyStats = {
@@ -24,8 +26,8 @@ type WeeklyStats = {
 
 const startOfWeekLocal = (d: Date) => {
   const date = new Date(d);
-  const day = date.getDay(); // 0 Sun ... 6 Sat
-  const diff = (day === 0 ? -6 : 1) - day; // Monday-start week
+  const day = date.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
   date.setDate(date.getDate() + diff);
   date.setHours(0, 0, 0, 0);
   return date;
@@ -44,39 +46,27 @@ const inInterval = (dt: Date, start: Date, endExclusive: Date) =>
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   const [weekly, setWeekly] = useState<WeeklyStats>({
     sessions: 0,
     distanceKm: 0,
     avgMood: null,
   });
+
   const [loadingWeekly, setLoadingWeekly] = useState(false);
-
-  const userEmail = user?.email ?? "";
-  const displayName =
-    (user?.user_metadata?.display_name as string) ||
-    (user?.user_metadata?.full_name as string) ||
-    userEmail.split("@")[0] ||
-    "swimmer";
-
-  const initials = useMemo(() => {
-    const parts = displayName.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }, [displayName]);
 
   useEffect(() => {
     if (!user?.id) return;
 
-    const fetchWeeklyStats = async () => {
+    const loadWeekly = async () => {
       setLoadingWeekly(true);
       try {
-        const allEntries: DailyEntry[] = await fetchAllEntriesForUser(user.id);
+        const allEntries = await fetchAllEntriesForUser(user.id);
+        const today = new Date();
 
-        const now = new Date();
-        const weekStart = startOfWeekLocal(now);
-        const weekEnd = endOfWeekLocalExclusive(now);
+        const weekStart = startOfWeekLocal(today);
+        const weekEnd = endOfWeekLocalExclusive(today);
 
         let sessions = 0;
         let distanceKm = 0;
@@ -84,124 +74,107 @@ const Landing: React.FC = () => {
         let moodCount = 0;
 
         for (const e of allEntries) {
-          if (!e.date) continue;
-          const dt = parseISO(e.date);
-          if (!isValid(dt)) continue;
+          if (!e?.date) continue;
 
+          const dt = new Date(e.date);
+          if (isNaN(dt.getTime())) continue;
           if (!inInterval(dt, weekStart, weekEnd)) continue;
 
           if (typeof e.trainingVolume === "number" && e.trainingVolume > 0) {
             sessions++;
-            distanceKm += e.trainingVolume; // km
+            distanceKm += e.trainingVolume;
           }
 
-          if (typeof e.mood === "number") {
+          if (typeof e.mood === "number" && e.mood > 0) {
             moodSum += e.mood;
             moodCount++;
           }
         }
 
-        const avgMood = moodCount > 0 ? moodSum / moodCount : null;
-
-        setWeekly({ sessions, distanceKm, avgMood });
-      } catch (err: any) {
-        console.error("Landing weekly stats error:", err?.message || err);
-        showError("Weekly stats not loading — Supabase fetch failed.");
-        setWeekly({ sessions: 0, distanceKm: 0, avgMood: null });
+        setWeekly({
+          sessions,
+          distanceKm,
+          avgMood: moodCount ? moodSum / moodCount : null,
+        });
+      } catch (err) {
+        console.error(err);
+        showError("Could not load weekly totals.");
       } finally {
         setLoadingWeekly(false);
       }
     };
 
-    fetchWeeklyStats();
+    loadWeekly();
   }, [user?.id]);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate("/login");
+    } catch (e) {
+      console.error(e);
+      showError("Logout failed.");
+    }
+  };
 
   return (
     <main className="min-h-screen w-full bg-background text-foreground">
       <div className="mx-auto max-w-6xl px-4 py-8">
-        {/* HERO */}
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-white/5 bg-card/60 p-7 shadow-xl">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
             <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-              <span className="text-[color:var(--accent-soft)]">Black Line</span>{" "}
-              Journal
+              Black Line Journal
             </h1>
-            <p className="mt-3 text-sm text-muted-foreground md:text-base">
-              A fast lane to track mood, heart rate, and training load without endless
-              scrolling. Start your check-in, log today&apos;s swim, and jump into the
-              stats gallery in just a tap.
+            <p className="mt-2 text-sm text-muted-foreground md:text-base max-w-xl">
+              A fast lane to track mood, heart rate, and training load without endless scrolling.
+              Start your check-in, log today’s swim, and jump into the stats gallery in a tap.
             </p>
-
-            {/* Welcome block */}
-            <div className="mt-6 flex items-center gap-4 rounded-2xl border border-white/5 bg-background/40 p-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[color:var(--accent)] bg-background/70 text-lg font-bold">
-                {initials}
-              </div>
-              <div className="leading-tight">
-                <div className="text-sm font-semibold">
-                  Welcome back, {displayName}
-                </div>
-                {userEmail && (
-                  <div className="text-xs text-muted-foreground">{userEmail}</div>
-                )}
-              </div>
-            </div>
           </div>
 
-          {/* FAST ACTIONS */}
-          <div className="rounded-3xl border border-white/5 bg-card/60 p-7 shadow-xl">
-            <h2 className="text-xl font-semibold">Fast actions</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Jump straight to the flow you need—no multi-select, no extra scroll.
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate(ROUTES.profile)} className="rounded-full">
+              Profile
+            </Button>
+            <Button onClick={handleLogout} className="rounded-full">
+              Logout
+            </Button>
+          </div>
+        </div>
+
+        {/* Fast actions */}
+        <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl">
+            <div className="text-lg font-semibold mb-2">Fast actions</div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Jump straight to the flow you need — no multi-select, no extra scroll.
             </p>
 
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Link
-                to={ROUTES.morning}
-                className="rounded-2xl border border-white/5 bg-background/50 p-4 text-left transition hover:bg-background/70"
-              >
+            <div className="grid grid-cols-2 gap-4">
+              <Link to={ROUTES.morning} className="rounded-2xl border border-white/10 bg-background/40 p-4 hover:bg-background/60 transition">
                 <div className="font-semibold">Morning check-in</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Log mood + resting HR
-                </div>
+                <div className="text-xs text-muted-foreground mt-1">Log mood + resting HR</div>
               </Link>
 
-              <Link
-                to={ROUTES.session}
-                className="rounded-2xl border border-white/5 bg-background/50 p-4 text-left transition hover:bg-background/70"
-              >
+              <Link to={ROUTES.session} className="rounded-2xl border border-white/10 bg-background/40 p-4 hover:bg-background/60 transition">
                 <div className="font-semibold">Log a session</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Distance, pace, notes
-                </div>
+                <div className="text-xs text-muted-foreground mt-1">Distance, pace, notes</div>
               </Link>
 
-              <Link
-                to={ROUTES.stats}
-                className="rounded-2xl border border-white/5 bg-background/50 p-4 text-left transition hover:bg-background/70"
-              >
+              <Link to={ROUTES.stats} className="rounded-2xl border border-white/10 bg-background/40 p-4 hover:bg-background/60 transition">
                 <div className="font-semibold">View stats</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Trends & weekly totals
-                </div>
+                <div className="text-xs text-muted-foreground mt-1">Trends & weekly totals</div>
               </Link>
 
-              <Link
-                to={ROUTES.saved}
-                className="rounded-2xl border border-white/5 bg-background/50 p-4 text-left transition hover:bg-background/70"
-              >
+              <Link to={ROUTES.saved} className="rounded-2xl border border-white/10 bg-background/40 p-4 hover:bg-background/60 transition">
                 <div className="font-semibold">Saved entries</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Browse past highlights
-                </div>
+                <div className="text-xs text-muted-foreground mt-1">Browse past highlights</div>
               </Link>
             </div>
           </div>
-        </section>
 
-        {/* WEEKLY SUMMARY */}
-        <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl md:col-span-1">
+          {/* Weekly summary card */}
+          <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl">
             <div className="text-base font-semibold">This week so far</div>
 
             <div className="mt-3 space-y-2 text-sm">
@@ -222,34 +195,21 @@ const Landing: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Avg mood</span>
                 <span className="font-semibold">
-                  {loadingWeekly
-                    ? "…"
-                    : weekly.avgMood == null
-                    ? "—"
-                    : weekly.avgMood.toFixed(1)}
+                  {loadingWeekly ? "…" : weekly.avgMood?.toFixed(1) ?? "—"}
                 </span>
               </div>
             </div>
 
             <div className="mt-4 text-xs text-muted-foreground">
-              Live totals pulled from your Supabase diary_entries store.
-            </div>
-          </div>
-
-          <div className="hidden md:block md:col-span-2" />
-        </section>
-
-        {/* MOTIVATION CARD — now matches style */}
-        <section className="mt-8">
-          <div className="rounded-3xl border border-white/5 bg-card/60 p-6 shadow-xl">
-            <div className="text-center text-sm italic text-muted-foreground">
-              “Tough sets build fast swims.”
+              Live totals pulled from your Supabase daily_entries store.
             </div>
 
-            <div className="mt-4 flex justify-center">
-              <Button onClick={() => navigate(ROUTES.diary)}>
-                Go to Diary
-              </Button>
+            <div className="mt-6 flex justify-center">
+              <Link to={ROUTES.diary}>
+                <Button variant="outline" className="rounded-full px-8">
+                  Go to Diary
+                </Button>
+              </Link>
             </div>
           </div>
         </section>
