@@ -52,7 +52,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           mode="single"
           selected={selectedDate}
           onSelect={onDateChange}
-          // v8-safe: no captionLayout/fromYear/toYear
           initialFocus
           className="calendar-red-dates"
         />
