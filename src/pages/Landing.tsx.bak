@@ -12,7 +12,7 @@ const ROUTES = {
   session: "/log",
   saved: "/log/history",
   stats: "/stats",
-  diary: "/diary", // alias -> MorningCheckinPage
+   diary: "/today",          // "Go to Diary" should land on Today
 };
 
 type WeeklyStats = {

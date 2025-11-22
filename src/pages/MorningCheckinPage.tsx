@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { parseISO, isValid } from "date-fns";
+import { parseISO, isValid, format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/DatePicker";
@@ -24,17 +24,12 @@ type WeeklyStats = {
   avgMood: number | null;
 };
 
-const toDateOnlyString = (d: Date) => {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-};
+const toDateOnlyString = (d: Date) => format(d, "yyyy-MM-dd");
 
 const startOfWeekLocal = (d: Date) => {
   const date = new Date(d);
-  const day = date.getDay(); // 0 Sun ... 6 Sat
-  const diff = (day === 0 ? -6 : 1) - day; // Monday start
+  const day = date.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
   date.setDate(date.getDate() + diff);
   date.setHours(0, 0, 0, 0);
   return date;
@@ -50,6 +45,15 @@ const endOfWeekLocalExclusive = (d: Date) => {
 
 const inInterval = (dt: Date, start: Date, endExclusive: Date) =>
   dt >= start && dt < endExclusive;
+
+const safeParseISO = (s: string): Date | null => {
+  try {
+    const d = parseISO(s);
+    return isValid(d) ? d : null;
+  } catch {
+    return null;
+  }
+};
 
 const MorningCheckinPage: React.FC = () => {
   const navigate = useNavigate();
@@ -68,7 +72,13 @@ const MorningCheckinPage: React.FC = () => {
     avgMood: null,
   });
 
-  const dateStr = useMemo(() => toDateOnlyString(selectedDate), [selectedDate]);
+  const dateStr = useMemo(() => {
+    // absolute safety against invalid Date
+    if (!selectedDate || isNaN(selectedDate.getTime())) {
+      return toDateOnlyString(new Date());
+    }
+    return toDateOnlyString(selectedDate);
+  }, [selectedDate]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -103,7 +113,7 @@ const MorningCheckinPage: React.FC = () => {
     const loadWeekly = async () => {
       setLoadingWeekly(true);
       try {
-        const allEntries = await fetchAllEntriesForUser(user.id);
+        const allEntries: DailyEntry[] = await fetchAllEntriesForUser(user.id);
 
         const weekStart = startOfWeekLocal(selectedDate);
         const weekEnd = endOfWeekLocalExclusive(selectedDate);
@@ -114,19 +124,9 @@ const MorningCheckinPage: React.FC = () => {
         let moodCount = 0;
 
         for (const e of allEntries) {
-          // Hard guard for bad/missing dates
-          if (!e?.date || typeof e.date !== "string") continue;
-
-          let dt: Date;
-          try {
-            dt = parseISO(e.date);
-          } catch (err) {
-            // This is where your RangeError was coming from
-            console.warn("Skipping entry with invalid date:", e.date, e);
-            continue;
-          }
-
-          if (!isValid(dt)) continue;
+          if (!e?.date) continue;
+          const dt = safeParseISO(e.date);
+          if (!dt) continue;
           if (!inInterval(dt, weekStart, weekEnd)) continue;
 
           if (typeof e.trainingVolume === "number" && e.trainingVolume > 0) {
@@ -224,7 +224,9 @@ const MorningCheckinPage: React.FC = () => {
         <section className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <DatePicker
             selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
+            onDateChange={(d) => {
+              if (d && !isNaN(d.getTime())) setSelectedDate(d);
+            }}
           />
 
           <Button
@@ -277,7 +279,7 @@ const MorningCheckinPage: React.FC = () => {
             </div>
 
             <div className="mt-4 text-xs text-muted-foreground">
-              Live totals pulled from your Supabase diary_entries store.
+              Live totals pulled from your Supabase daily_entries store.
             </div>
           </div>
         </section>
