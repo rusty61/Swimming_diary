@@ -29,6 +29,7 @@ type WeeklyDatum = {
 const StatsWeeklyPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const userId = user?.id;
 
   const [weeklyData, setWeeklyData] = useState<WeeklyDatum[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +38,7 @@ const StatsWeeklyPage: React.FC = () => {
   const [rangeDays, setRangeDays] = useState<number>(84); // 12 weeks
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setWeeklyData([]);
       setLoading(false);
       return;
@@ -50,7 +51,7 @@ const StatsWeeklyPage: React.FC = () => {
         setLoading(true);
 
         const entries: DailyEntry[] = await fetchEntriesForLastNDays(
-          user.id,
+          userId,
           rangeDays,
           new Date(),
         );
@@ -107,7 +108,7 @@ const StatsWeeklyPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, rangeDays]);
+  }, [userId, rangeDays]);
 
   const rangeOptions = [
     { days: 28, label: "4w" },
