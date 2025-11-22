@@ -10,7 +10,7 @@ import DailyNotesCard from "@/components/DailyNotesCard";
 import InteractiveMoodCard from "@/components/InteractiveMoodCard";
 import HeartRateCard from "@/components/HeartRateCard";
 import WeeklySummaryCard from "@/components/WeeklySummaryCard";
-import MotivationQuoteCard from "@/components/MotivationQuoteCard"; // your new standardized shared quote card
+import MotivationBoostCard from "@/components/MotivationBoostCard"; // <-- exists now
 
 import { useAuth } from "@/auth/AuthContext";
 import { showError, showSuccess } from "@/utils/toast";
@@ -29,10 +29,9 @@ const MorningCheckinPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
 
-  // --- helpers
+  // local yyyy-mm-dd
   const dayKey = useMemo(() => {
     const d = selectedDate ?? new Date();
-    // local yyyy-mm-dd
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
@@ -142,9 +141,9 @@ const MorningCheckinPage: React.FC = () => {
         </p>
       </div>
 
-      {/* motivation quote (shared standard card) */}
+      {/* motivation quote/card */}
       <div className="mb-6 w-full max-w-5xl">
-        <MotivationQuoteCard />
+        <MotivationBoostCard />
       </div>
 
       {/* date + update */}
@@ -175,17 +174,16 @@ const MorningCheckinPage: React.FC = () => {
         />
       </section>
 
-      {/* ✅ THIS WEEK SO FAR card goes here (full width) */}
+      {/* this week so far */}
       <section className="mt-6 w-full max-w-5xl">
         <WeeklySummaryCard />
       </section>
 
-      {/* notes / extras (if you want them on today page) */}
+      {/* notes */}
       <section className="mt-6 w-full max-w-5xl">
         <DailyNotesCard selectedDate={selectedDate} />
       </section>
 
-      {/* bottom spacing */}
       <div className="h-10" />
     </main>
   );
