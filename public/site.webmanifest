@@ -5,81 +5,48 @@
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "display_override": [
-    "standalone",
-    "fullscreen",
-    "minimal-ui"
-  ],
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "background_color": "#000000",
   "theme_color": "#000000",
   "description": "Mood Swimmer / Blackline Journal. Track mood, distance, heart rate, and notes.",
   "orientation": "portrait",
-  "categories": [
-    "health",
-    "sports",
-    "lifestyle"
-  ],
+  "categories": ["health", "sports", "lifestyle"],
   "icons": [
     {
-      "src": "public/splash/manifest-icon-192.maskable.png",
+      "src": "/manifest-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "public/splash/manifest-icon-192.maskable.png",
+      "src": "/manifest-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "public/splash/manifest-icon-512.maskable.png",
+      "src": "/manifest-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "public/splash/manifest-icon-512.maskable.png",
+      "src": "/manifest-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/blackline_transparent_180x180.png",
+      "src": "/apple-icon-180.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/blackline_transparent_180x180.png",
-      "sizes": "180x180",
+      "src": "/favicon-196.png",
+      "sizes": "196x196",
       "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/blackline_transparent_167x167.png",
-      "sizes": "167x167",
-      "type": "image/png"
-    },
-    {
-      "src": "/blackline_transparent_152x152.png",
-      "sizes": "152x152",
-      "type": "image/png"
-    },
-    {
-      "src": "/blackline_transparent_120x120.png",
-      "sizes": "120x120",
-      "type": "image/png"
-    },
-    {
-      "src": "/blackline_transparent_32x32.png",
-      "sizes": "32x32",
-      "type": "image/png"
-    },
-    {
-      "src": "/blackline_transparent_16x16.png",
-      "sizes": "16x16",
-      "type": "image/png"
+      "purpose": "any"
     }
   ]
 }
