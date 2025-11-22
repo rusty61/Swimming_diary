@@ -100,8 +100,14 @@ const Landing: React.FC = () => {
 
         for (const e of allEntries) {
           if (!e.date) continue;
-          const dt = safeParseDate(e.date);
-          if (!dt) continue;
+          let dt: Date | null = null;
+          try {
+          dt = parseISO(e.date);
+          } catch {
+           dt = null;
+          }
+          if (!dt || !isValid(dt)) continue;
+
 
           if (!inInterval(dt, weekStart, weekEnd)) continue;
 

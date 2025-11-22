@@ -114,8 +114,18 @@ const MorningCheckinPage: React.FC = () => {
         let moodCount = 0;
 
         for (const e of allEntries) {
-          if (!e.date) continue;
-          const dt = parseISO(e.date);
+          // Hard guard for bad/missing dates
+          if (!e?.date || typeof e.date !== "string") continue;
+
+          let dt: Date;
+          try {
+            dt = parseISO(e.date);
+          } catch (err) {
+            // This is where your RangeError was coming from
+            console.warn("Skipping entry with invalid date:", e.date, e);
+            continue;
+          }
+
           if (!isValid(dt)) continue;
           if (!inInterval(dt, weekStart, weekEnd)) continue;
 
