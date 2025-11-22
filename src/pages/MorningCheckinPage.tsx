@@ -58,9 +58,10 @@ const MorningCheckinPage: React.FC = () => {
 
         setMood((data?.mood ?? null) as MoodValue | null);
         setRestingHr(data?.resting_hr ?? "");
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(e);
-        showError("Couldn’t load day entry.");
+        const message = e instanceof Error ? e.message : null;
+        showError(message ? `Couldn’t load day entry: ${message}` : "Couldn’t load day entry.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -93,9 +94,10 @@ const MorningCheckinPage: React.FC = () => {
       if (error) throw error;
 
       showSuccess("Morning check-in saved.");
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      showError("Couldn’t save check-in.");
+      const message = e instanceof Error ? e.message : null;
+      showError(message ? `Couldn’t save check-in: ${message}` : "Couldn’t save check-in.");
     } finally {
       setLoading(false);
     }

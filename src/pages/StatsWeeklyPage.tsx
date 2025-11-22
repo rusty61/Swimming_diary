@@ -107,7 +107,7 @@ const StatsWeeklyPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, rangeDays]);
+  }, [user, rangeDays]);
 
   const rangeOptions = [
     { days: 28, label: "4w" },

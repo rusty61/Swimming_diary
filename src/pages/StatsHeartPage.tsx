@@ -89,7 +89,7 @@ const StatsHeartPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, rangeDays]);
+  }, [user, rangeDays]);
 
   const rangeOptions = [7, 14, 28, 56];
 

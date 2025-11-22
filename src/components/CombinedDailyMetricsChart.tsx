@@ -1,7 +1,7 @@
 // src/components/CombinedDailyMetricsChart.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -39,7 +39,7 @@ type ChartDatum = {
 };
 
 const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
-  selectedDate = new Date(),
+  selectedDate,
   rangeDays = 7,
   setRangeDays,
   refreshKey,
@@ -50,6 +50,11 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
 
   const [chartData, setChartData] = useState<ChartDatum[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const targetDateMs = useMemo(
+    () => (selectedDate ? selectedDate.getTime() : Date.now()),
+    [selectedDate],
+  );
 
   // Legend visibility state
   const [visibleLines, setVisibleLines] = useState({
@@ -87,7 +92,7 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
         const entries: DailyEntry[] = await fetchEntriesForLastNDays(
           user.id,
           rangeDays,
-          selectedDate,
+          new Date(targetDateMs),
         );
 
         if (!Array.isArray(entries)) {
@@ -123,7 +128,7 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [user?.id, selectedDate.getTime(), rangeDays, refreshKey]);
+  }, [user, targetDateMs, rangeDays, refreshKey]);
 
   const rangeOptions = [7, 14, 28, 90];
 

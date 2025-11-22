@@ -15,7 +15,7 @@ import {
 } from "@/data/dailyEntriesSupabase";
 
 interface WeeklySummaryCardProps {
-  selectedDate?: Date;          // <-- NOW OPTIONAL
+  selectedDate?: Date;
   refreshKey?: number;
   className?: string;
 }
@@ -32,9 +32,6 @@ const WeeklySummaryCard: React.FC<WeeklySummaryCardProps> = ({
   const [weeklyMoodTrend, setWeeklyMoodTrend] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Always have a real date to work with
-  const summaryDate = selectedDate ?? new Date();
-
   useEffect(() => {
     if (!user) {
       setWeeklyTotalKm(0);
@@ -45,6 +42,7 @@ const WeeklySummaryCard: React.FC<WeeklySummaryCardProps> = ({
     }
 
     let cancelled = false;
+    const summaryDate = selectedDate ?? new Date();
 
     const run = async () => {
       try {
@@ -88,11 +86,7 @@ const WeeklySummaryCard: React.FC<WeeklySummaryCardProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [
-    user?.id,
-    summaryDate.getTime(), // <-- SAFE NOW
-    refreshKey,
-  ]);
+  }, [user, selectedDate, refreshKey]);
 
   return (
     <Card
