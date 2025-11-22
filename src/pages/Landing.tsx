@@ -82,10 +82,26 @@ const Landing: React.FC = () => {
         let moodSum = 0;
         let moodCount = 0;
 
+        const safeParseDate = (value: unknown) => {
+          if (value instanceof Date) return isValid(value) ? value : null;
+          if (typeof value !== "string") return null;
+
+          const trimmed = value.trim();
+          if (!trimmed) return null;
+
+          try {
+            const parsed = parseISO(trimmed);
+            return isValid(parsed) ? parsed : null;
+          } catch (error) {
+            console.warn("Landing: skipping invalid date", value, error);
+            return null;
+          }
+        };
+
         for (const e of allEntries) {
           if (!e.date) continue;
-          const dt = parseISO(e.date);
-          if (!isValid(dt)) continue;
+          const dt = safeParseDate(e.date);
+          if (!dt) continue;
 
           if (!inInterval(dt, weekStart, weekEnd)) continue;
 
