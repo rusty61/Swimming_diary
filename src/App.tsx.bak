@@ -28,6 +28,7 @@ import HowItWorksPage from "./pages/HowItWorksPage";
 import StatsDailyPage from "./pages/StatsDailyPage";
 import StatsWeeklyPage from "./pages/StatsWeeklyPage";
 import StatsHeartPage from "./pages/StatsHeartPage";
+import StatsDailyFullPage from "./pages/StatsDailyFullPage";
 
 import { AppShell } from "./components/layout/AppShell";
 
@@ -64,6 +65,7 @@ const App: React.FC = () => (
               {/* Stats hub + detail pages */}
               <Route path="/stats" element={<Stats />} />
               <Route path="/stats/daily" element={<StatsDailyPage />} />
+              <Route path="/stats/daily/full" element={<StatsDailyFullPage />} />
               <Route path="/stats/weekly" element={<StatsWeeklyPage />} />
               <Route path="/stats/heart" element={<StatsHeartPage />} />
 

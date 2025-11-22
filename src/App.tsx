@@ -26,31 +26,30 @@ import SavedEntriesPage from "./pages/SavedEntriesPage";
 import HowItWorksPage from "./pages/HowItWorksPage";
 
 import StatsDailyPage from "./pages/StatsDailyPage";
+import StatsDailyFullPage from "./pages/StatsDailyFullPage";
 import StatsWeeklyPage from "./pages/StatsWeeklyPage";
 import StatsHeartPage from "./pages/StatsHeartPage";
-import StatsDailyFullPage from "./pages/StatsDailyFullPage";
 
 import { AppShell } from "./components/layout/AppShell";
 
 const queryClient = new QueryClient();
 
-const App: React.FC = () => (
+const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
       <AuthProvider>
         <Routes>
           {/* ---------- Public routes ---------- */}
           <Route path="/login" element={<LoginForm />} />
-          <Route path="/landing" element={<Landing />} />
 
           {/* ---------- Authenticated app ---------- */}
           <Route element={<AuthGate />}>
-            {/* AppShell wraps all in-app pages (bottom nav, etc.) */}
             <Route element={<AppShell />}>
               {/* Initial entry point after login/auth check */}
               <Route path="/" element={<Index />} />
+
+              {/* Landing is now authenticated (dashboard/home) */}
+              <Route path="/landing" element={<Landing />} />
 
               {/* Today = Morning Check-in */}
               <Route path="/today" element={<MorningCheckinPage />} />
