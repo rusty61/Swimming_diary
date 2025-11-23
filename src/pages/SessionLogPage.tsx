@@ -58,30 +58,33 @@ const SessionLogPage: React.FC = () => {
           </div>
         </header>
 
-        {/* ONE grid, stretch height so left column matches notes height */}
+        {/* 2-col grid, stretch so both columns same height */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          {/* LEFT COLUMN: full height, spread cards top/middle/bottom */}
-          <div className="flex flex-col h-full justify-between">
+          {/* LEFT COLUMN: 3 equal-height rows with small gaps */}
+          <div className="grid grid-rows-3 gap-4 h-full">
             <TrainingVolumeCard
               key={`vol-${dataVersion}`}
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
+              className="h-full"
             />
 
             <RPECard
               key={`rpe-${dataVersion}`}
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
+              className="h-full"
             />
 
             <RestingHRCard
               key={`resthr-${dataVersion}`}
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
+              className="h-full"
             />
           </div>
 
-          {/* RIGHT COLUMN: notes takes the full column height */}
+          {/* RIGHT COLUMN */}
           <DailyNotesCard
             key={`notes-${dataVersion}`}
             selectedDate={selectedDate}
