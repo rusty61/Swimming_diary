@@ -1,3 +1,4 @@
+﻿// src/components/WeeklySummaryCard.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -9,12 +10,17 @@ import { cn } from "@/lib/utils";
 import {
   fetchAllEntriesForUser,
   getWeeklyTrainingVolumeFromEntries,
-  getWeeklyAverageHeartRateFromEntries,
   getWeeklyMoodTrendFromEntries,
+  DailyEntry,
 } from "@/data/dailyEntriesSupabase";
+import {
+  fetchMetricsLastNDays,
+  DailyMetrics,
+} from "@/data/dailyMetricsSupabase";
+import { format, parseISO, isValid } from "date-fns";
 
 interface WeeklySummaryCardProps {
-  selectedDate: Date;
+  selectedDate?: Date;
   refreshKey?: number;
   className?: string;
 }
@@ -27,61 +33,66 @@ const WeeklySummaryCard: React.FC<WeeklySummaryCardProps> = ({
   const { user } = useAuth();
 
   const [weeklyTotalKm, setWeeklyTotalKm] = useState<number>(0);
-  const [weeklyAvgHr, setWeeklyAvgHr] = useState<number | null>(null);
+  const [weeklyAvgRestingHr, setWeeklyAvgRestingHr] = useState<number | null>(
+    null,
+  );
   const [weeklyMoodTrend, setWeeklyMoodTrend] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // If there is no logged-in user, clear the card and bail out.
-    if (!user) {
-      setWeeklyTotalKm(0);
-      setWeeklyAvgHr(null);
-      setWeeklyMoodTrend("");
-      setLoading(false);
-      return;
-    }
-
     let cancelled = false;
 
     const run = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
 
-        // 1) Get *all* entries for this user
-        const allEntries = await fetchAllEntriesForUser(user.id);
-        console.log("[WeeklySummaryCard] allEntries:", allEntries);
-
-        // 2) Use helpers to derive weekly stats for the week of selectedDate
+        const allEntries: DailyEntry[] = await fetchAllEntriesForUser(user.id);
         const summaryDate = selectedDate ?? new Date();
+        const thisWeekKey = format(summaryDate, "yyyy-'W'ww");
 
-        const { total } = getWeeklyTrainingVolumeFromEntries(
-          allEntries,
-          summaryDate,
-        );
-        const avgHr = getWeeklyAverageHeartRateFromEntries(
-          summaryDate,
-          allEntries,
-        );
-        const moodTrend = getWeeklyMoodTrendFromEntries(
-          summaryDate,
-          allEntries,
-        );
+        // Weekly training volume (km) from entries table
+        const trainingByWeek = getWeeklyTrainingVolumeFromEntries(allEntries);
+        const totalKm = trainingByWeek[thisWeekKey] ?? 0;
+
+        // Weekly mood average from entries table
+        const moodByWeek = getWeeklyMoodTrendFromEntries(allEntries);
+        const avgMood = moodByWeek[thisWeekKey];
+        const moodTrendStr = avgMood != null ? avgMood.toFixed(1) : "";
+
+        // Weekly resting HR average from metrics table
+        const metrics: DailyMetrics[] = await fetchMetricsLastNDays(user.id, 60);
+        const weekResting = (metrics ?? [])
+          .filter((m) => {
+            const dt = parseISO(m.date);
+            if (!isValid(dt) || m.restingHr == null) return false;
+            const wk = format(dt, "yyyy-'W'ww");
+            return wk === thisWeekKey;
+          })
+          .map((m) => m.restingHr as number);
+
+        const avgResting =
+          weekResting.length > 0
+            ? Math.round(
+                weekResting.reduce((a, b) => a + b, 0) / weekResting.length,
+              )
+            : null;
 
         if (cancelled) return;
 
-        console.log("[WeeklySummaryCard] weekly total km:", total);
-        console.log("[WeeklySummaryCard] weekly avg HR:", avgHr);
-        console.log("[WeeklySummaryCard] weekly mood trend:", moodTrend);
-
-        setWeeklyTotalKm(total);
-        setWeeklyAvgHr(avgHr);
-        setWeeklyMoodTrend(moodTrend);
+        setWeeklyTotalKm(totalKm);
+        setWeeklyAvgRestingHr(avgResting);
+        setWeeklyMoodTrend(moodTrendStr);
       } catch (err) {
         console.error("[WeeklySummaryCard] error:", err);
         if (!cancelled) {
           showError("Failed to load weekly summary.");
           setWeeklyTotalKm(0);
-          setWeeklyAvgHr(null);
+          setWeeklyAvgRestingHr(null);
           setWeeklyMoodTrend("");
         }
       } finally {
@@ -91,56 +102,53 @@ const WeeklySummaryCard: React.FC<WeeklySummaryCardProps> = ({
 
     run();
 
-    // Cleanup to avoid setting state on an unmounted component
     return () => {
       cancelled = true;
     };
-    // NOTE: use user.id and selectedDate.getTime() so React reliably re-runs
-  }, [user?.id, selectedDate.getTime(), refreshKey]);
+  }, [user?.id, selectedDate, refreshKey]);
 
   return (
     <Card
       className={cn(
-        "bg-card text-foreground shadow-md border-card-border p-6 h-full",
+        "h-full flex flex-col bg-card/60 border-border shadow-md",
         className,
       )}
     >
-      <CardHeader className="p-0 mb-4">
-        <CardTitle className="text-2xl font-bold text-accent flex items-center">
-          <CalendarDays className="mr-2" /> Weekly Summary
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg text-text-main flex items-center">
+          <CalendarDays className="mr-2 text-accent" />
+          Weekly Summary
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="p-0 space-y-3">
+      <CardContent className="pt-2 space-y-3 text-sm sm:text-base">
         {loading ? (
-          <div className="text-center text-text-muted">
-            Loading weekly summary...
-          </div>
+          <div className="text-text-muted">Loading weekly stats...</div>
         ) : (
           <>
-            {/* Total training distance */}
+            {/* Weekly total distance */}
             <div className="flex items-center justify-between text-lg">
               <span className="flex items-center text-text-main">
                 <Waves className="mr-2 text-accent" />
-                Total Training:
+                Total Distance:
               </span>
               <span className="font-semibold text-accent">
                 {weeklyTotalKm.toFixed(1)} km
               </span>
             </div>
 
-            {/* Average heart rate (if any data) */}
+            {/* Weekly avg resting HR */}
             <div className="flex items-center justify-between text-lg">
               <span className="flex items-center text-text-main">
                 <HeartPulse className="mr-2 text-accent" />
-                Avg. Heart Rate:
+                Avg. Resting HR:
               </span>
               <span className="font-semibold text-accent">
-                {weeklyAvgHr !== null ? `${weeklyAvgHr} bpm` : "—"}
+                {weeklyAvgRestingHr !== null ? `${weeklyAvgRestingHr} bpm` : "—"}
               </span>
             </div>
 
-            {/* Mood trend summary string */}
+            {/* Mood trend summary */}
             <div className="flex items-center justify-between text-lg">
               <span className="flex items-center text-text-main">
                 Mood Trend:

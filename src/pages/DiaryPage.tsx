@@ -1,10 +1,9 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import InteractiveMoodCard from "@/components/InteractiveMoodCard";
-import HeartRateCard from "@/components/HeartRateCard";
 import TrainingVolumeCard from "@/components/TrainingVolumeCard";
 import DailyNotesCard from "@/components/DailyNotesCard";
 import MotivationBoostCard from "@/components/MotivationBoostCard";
@@ -14,21 +13,23 @@ import RPECard from "@/components/RPECard";
 import RestingHRCard from "@/components/RestingHRCard";
 import { DatePicker } from "@/components/DatePicker";
 import { useAuth } from "@/auth/AuthContext";
-import { showError, showSuccess } from "@/utils/toast";
-import { MoodValue } from "@/components/MoodSelector";
+import { showSuccess } from "@/utils/toast";
+import { cn } from "@/lib/utils";
+
+type MoodValue = number;
 
 const DiaryPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
-  const [selectedSection, setSelectedSection] = useState<"diary" | "stats">(
-    "diary"
-  );
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dataVersion, setDataVersion] = useState(0);
+  const [selectedSection, setSelectedSection] = useState<"diary" | "stats">(
+    "diary",
+  );
 
-  const diaryRef = useRef<HTMLDivElement | null>(null);
-  const statsRef = useRef<HTMLDivElement | null>(null);
+  const diaryRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (selectedSection === "diary") {
@@ -51,150 +52,103 @@ const DiaryPage: React.FC = () => {
   const handleOpenStats = () => setSelectedSection("stats");
 
   const handleDataSaved = () => {
-    // leave this lightweight; cards already toast on save
+    setDataVersion((v) => v + 1);
   };
 
   const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate("/");
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "An unexpected error occurred during logout.";
-      showError(`An unexpected error occurred during logout: ${message}`);
-      console.error("Unexpected logout error:", error);
-    }
+    await signOut();
+    navigate("/");
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative">
-      <div className="max-w-7xl mx-auto py-8 z-10 relative">
-        <div className="mb-4 flex justify-center">
-          <h1 className="text-3xl sm:text-4xl font-semibold text-text-main">
-            Your Daily Diary
-          </h1>
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      {/* Top bar */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <DatePicker selectedDate={selectedDate} onDateChange={setSelectedDate} />
+          <Button variant="secondary" onClick={applyDateSelection}>
+            Apply Date
+          </Button>
         </div>
 
-        <nav className="flex justify-center gap-4 mb-8">
+        <div className="flex items-center gap-2">
           <Button
+            variant={selectedSection === "diary" ? "default" : "outline"}
             onClick={handleOpenDiary}
-            className={`px-6 py-3 text-lg font-semibold rounded-lg transition-colors ${
-              selectedSection === "diary"
-                ? "bg-accent text-white"
-                : "bg-input text-foreground hover:bg-accent/20"
-            }`}
           >
-            Diary
+            Daily Diary
           </Button>
-
           <Button
+            variant={selectedSection === "stats" ? "default" : "outline"}
             onClick={handleOpenStats}
-            className={`px-6 py-3 text-lg font-semibold rounded-lg transition-colors ${
-              selectedSection === "stats"
-                ? "bg-accent text-white"
-                : "bg-input text-foreground hover:bg-accent/20"
-            }`}
           >
-            Stats
+            Performance Stats
           </Button>
-        </nav>
 
-        <main className="px-4">
-          <section ref={diaryRef} className="mb-16">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <DatePicker
-                selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
-              />
+          <Button className="ml-2" onClick={handleDataSaved}>
+            Update
+          </Button>
+          <Button variant="outline" onClick={handleLogout}>
+            Log out
+          </Button>
+        </div>
+      </div>
 
-              <div className="flex gap-2">
-                <Button onClick={applyDateSelection} className="bg-accent">
-                  Update
-                </Button>
-                <Button variant="outline" onClick={handleLogout}>
-                  Log out
-                </Button>
-              </div>
-            </div>
+      {/* Diary section */}
+      <div ref={diaryRef} className={cn(selectedSection !== "diary" && "hidden")}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <InteractiveMoodCard
+            key={`mood-${dataVersion}`}
+            selectedDate={selectedDate}
+            onMoodChange={handleMoodChange}
+            onSaved={handleDataSaved}
+            className="h-full"
+          />
 
-            {/* IMPORTANT: items-start prevents short cards being stretched tall */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-start">
-              <InteractiveMoodCard
-                key={`mood-${dataVersion}`}
-                selectedDate={selectedDate}
-                onMoodChange={handleMoodChange}
-                onSaved={handleDataSaved}
-                className="h-full"
-              />
+          <TrainingVolumeCard
+            key={`vol-${dataVersion}`}
+            selectedDate={selectedDate}
+            onSaved={handleDataSaved}
+            className="h-full"
+          />
 
-              {/* no h-full -> stays compact */}
-              <TrainingVolumeCard
-                key={`vol-${dataVersion}`}
-                selectedDate={selectedDate}
-                onSaved={handleDataSaved}
-              />
+          <RPECard
+            key={`rpe-${dataVersion}`}
+            selectedDate={selectedDate}
+            onSaved={handleDataSaved}
+            className="h-full"
+          />
 
-              <HeartRateCard
-                key={`hr-${dataVersion}`}
-                selectedDate={selectedDate}
-                onSaved={handleDataSaved}
-                className="h-full"
-              />
+          <RestingHRCard
+            key={`resting-${dataVersion}`}
+            selectedDate={selectedDate}
+            onSaved={handleDataSaved}
+            className="h-full"
+          />
 
-              {/* RPE left, natural height */}
-              <RPECard
-                key={`rpe-${dataVersion}`}
-                selectedDate={selectedDate}
-                onSaved={handleDataSaved}
-                className="md:col-start-1"
-              />
+          <DailyNotesCard
+            key={`notes-${dataVersion}`}
+            selectedDate={selectedDate}
+            onSaved={handleDataSaved}
+            className="md:col-span-2"
+          />
 
-              {/* Resting HR right, natural height */}
-              <RestingHRCard
-                key={`resthr-${dataVersion}`}
-                selectedDate={selectedDate}
-                onSaved={handleDataSaved}
-                className="md:col-start-3"
-              />
-            </div>
+          <MotivationBoostCard className="md:col-span-2" />
+        </div>
+      </div>
 
-            <div className="mb-8">
-              <ReadinessRiskCard
-                key={`risk-${dataVersion}`}
-                selectedDate={selectedDate}
-              />
-            </div>
+      {/* Stats section */}
+      <div ref={statsRef} className={cn(selectedSection !== "stats" && "hidden")}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <WeeklySummaryCard selectedDate={selectedDate} refreshKey={dataVersion} />
+          <ReadinessRiskCard selectedDate={selectedDate} refreshKey={dataVersion} />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-              <DailyNotesCard
-                key={`notes-${dataVersion}`}
-                selectedDate={selectedDate}
-                onSaved={handleDataSaved}
-              />
-              <MotivationBoostCard />
-            </div>
-
-            <div className="mb-8">
-              <WeeklySummaryCard
-                selectedDate={selectedDate}
-                refreshKey={dataVersion}
-                className="w-full"
-              />
-            </div>
-
-            <div className="flex justify-center mt-4">
-              <Link to="/stats">
-                <Button variant="outline">View Full Stats Page</Button>
-              </Link>
-            </div>
-          </section>
-
-          <section ref={statsRef}>
-            {/* Keep your stats layout unchanged */}
-          </section>
-        </main>
+          <div className="lg:col-span-2">
+            <Button variant="outline" asChild className="w-full">
+              <Link to="/stats">View Full Stats Page</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

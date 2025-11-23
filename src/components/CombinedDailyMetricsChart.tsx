@@ -1,4 +1,4 @@
-// src/components/CombinedDailyMetricsChart.tsx
+﻿// src/components/CombinedDailyMetricsChart.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -15,13 +15,16 @@ import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/auth/AuthContext";
 import {
   fetchEntriesForLastNDays,
   DailyEntry,
 } from "@/data/dailyEntriesSupabase";
-import { useAuth } from "@/auth/AuthContext";
-import { cn } from "@/lib/utils";
-import { Maximize2 } from "lucide-react";
+import {
+  fetchMetricsLastNDays,
+  DailyMetrics,
+} from "@/data/dailyMetricsSupabase";
 
 interface CombinedDailyMetricsChartProps {
   selectedDate?: Date;
@@ -34,27 +37,26 @@ interface CombinedDailyMetricsChartProps {
 type ChartDatum = {
   name: string;
   mood: number;
-  heartRate: number | null;
+  restingHr: number | null;
   trainingVolume: number | null;
 };
 
 const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
-  selectedDate = new Date(),
-  rangeDays = 7,
+  selectedDate,
+  rangeDays = 14,
   setRangeDays,
   refreshKey,
   className,
 }) => {
-  const { user } = useAuth();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [chartData, setChartData] = useState<ChartDatum[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Legend visibility state
   const [visibleLines, setVisibleLines] = useState({
     trainingVolume: true,
-    heartRate: true,
+    restingHr: true,
     mood: true,
   });
 
@@ -65,22 +67,21 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
     if (isMobile) {
       setVisibleLines({
         trainingVolume: true,
-        heartRate: false,
+        restingHr: false,
         mood: false,
       });
     }
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setChartData([]);
-      setLoading(false);
-      return;
-    }
-
     let cancelled = false;
 
-    const loadChartData = async () => {
+    const run = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
 
@@ -99,12 +100,23 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
           return;
         }
 
-        const transformed = entries.map((entry) => {
+        // Metrics fetch (resting HR lives here)
+        const metrics: DailyMetrics[] = await fetchMetricsLastNDays(
+          user.id,
+          Math.max(rangeDays + 7, 30),
+        );
+
+        const restingMap: Record<string, number | null> = {};
+        for (const m of metrics ?? []) {
+          if (m?.date) restingMap[m.date] = m.restingHr ?? null;
+        }
+
+        const transformed: ChartDatum[] = entries.map((entry) => {
           const d = parseISO(entry.date);
           return {
             name: format(d, "MMM dd"),
             mood: entry.mood,
-            heartRate: entry.heartRate,
+            restingHr: restingMap[entry.date] ?? null,
             trainingVolume: entry.trainingVolume,
           };
         });
@@ -118,56 +130,55 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
       }
     };
 
-    loadChartData();
+    run();
 
     return () => {
       cancelled = true;
     };
-  }, [user?.id, selectedDate.getTime(), rangeDays, refreshKey]);
+  }, [user?.id, rangeDays, selectedDate, refreshKey]);
 
-  const rangeOptions = [7, 14, 28, 90];
-
-  const toggleLine = (key: "trainingVolume" | "heartRate" | "mood") => {
-    setVisibleLines((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+  const toggleLine = (key: keyof typeof visibleLines) => {
+    setVisibleLines((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const hasTrainingVolume = chartData.some(
-    (entry) =>
-      entry.trainingVolume !== undefined && entry.trainingVolume !== null,
-  );
-  const hasHeartRate = chartData.some(
-    (entry) => entry.heartRate !== undefined && entry.heartRate !== null,
-  );
-  const hasMood = chartData.some(
-    (entry) => entry.mood !== undefined && entry.mood !== null,
-  );
+  const hasTrainingVolume = chartData.some((d) => d.trainingVolume != null);
+  const hasRestingHr = chartData.some((d) => d.restingHr != null);
+  const hasMood = chartData.some((d) => d.mood != null);
 
   return (
     <Card
       className={cn(
-        "w-full h-[420px] sm:h-[460px] shadow-lg rounded-lg bg-card text-foreground border-card-border flex flex-col px-3 sm:px-4",
+        "h-full flex flex-col bg-card/60 border-border shadow-md",
         className,
       )}
     >
-      <CardHeader className="flex flex-row items-center justify-between pb-4 pt-4">
-        <CardTitle className="text-lg sm:text-xl font-semibold text-accent">
-          Daily Metrics Trend
-        </CardTitle>
-        <div className="flex space-x-2">
-          {rangeOptions.map((days) => (
-            <Button
-              key={days}
-              variant={rangeDays === days ? "default" : "outline"}
-              size="sm"
-              onClick={() => setRangeDays && setRangeDays(days)}
-              disabled={!setRangeDays}
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-lg text-text-main">Daily Trends</CardTitle>
+          <div className="text-xs text-text-muted mt-1">
+            Tap legend items to show/hide lines.
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {setRangeDays && (
+            <select
+              className="bg-background/60 border border-border rounded px-2 py-1 text-xs"
+              value={rangeDays}
+              onChange={(e) => setRangeDays(Number(e.target.value))}
             >
-              {days}d
-            </Button>
-          ))}
+              <option value={7}>7d</option>
+              <option value={14}>14d</option>
+              <option value={30}>30d</option>
+            </select>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/stats/trend")}
+          >
+            View Full Stats Page
+          </Button>
         </div>
       </CardHeader>
 
@@ -183,102 +194,60 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
         ) : (
           <>
             {/* Chart area — scrolls horizontally on small screens */}
-            <div className="flex-1 overflow-x-auto">
-              <div className="min-w-[900px] h-[260px] sm:min-w-0 sm:h-full">
+            <div className="w-full overflow-x-auto">
+              <div className="min-w-[520px] h-56 sm:h-64 md:h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={chartData}
-                    margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                    margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
                   >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--line-subtle)"
-                    />
-                    <XAxis
-                      dataKey="name"
-                      stroke="var(--text-muted)"
-                      tick={{ fontSize: 11 }}
-                    />
-
-                    {/* LEFT AXIS = TRAINING VOLUME */}
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
                     <YAxis
-                      yAxisId="trainingVolume"
-                      stroke="#22c55e"
-                      label={{
-                        value: "Training Volume (km)",
-                        angle: -90,
-                        fill: "#22c55e",
-                      }}
-                    />
-
-                    {/* RIGHT AXIS = HEART RATE */}
-                    <YAxis
-                      yAxisId="heartRate"
+                      yAxisId="right"
                       orientation="right"
-                      stroke="#ffffff"
-                      label={{
-                        value: "Heart Rate (bpm)",
-                        angle: 90,
-                        position: "insideRight",
-                        fill: "#ffffff",
-                      }}
+                      tick={{ fontSize: 12 }}
                     />
-
-                    {/* HIDDEN AXIS = MOOD (0–5 scale) */}
-                    <YAxis
-                      yAxisId="mood"
-                      stroke="#4ea8ff"
-                      domain={[0, 5]}
-                      hide
-                    />
-
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "var(--card)",
-                        border: "1px solid var(--card-border)",
-                        color: "var(--text-main)",
+                        background: "rgba(10,10,10,0.9)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: 8,
                       }}
+                      labelStyle={{ color: "white" }}
                     />
 
-                    {/* Training Volume = GREEN on left axis */}
                     {hasTrainingVolume && visibleLines.trainingVolume && (
                       <Line
-                        yAxisId="trainingVolume"
+                        yAxisId="left"
                         type="monotone"
                         dataKey="trainingVolume"
                         name="Training Volume"
-                        stroke="#22c55e"
-                        strokeWidth={1}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
+                        strokeWidth={2}
+                        dot={false}
                       />
                     )}
 
-                    {/* Heart rate = WHITE on right axis */}
-                    {hasHeartRate && visibleLines.heartRate && (
+                    {hasRestingHr && visibleLines.restingHr && (
                       <Line
-                        yAxisId="heartRate"
+                        yAxisId="right"
                         type="monotone"
-                        dataKey="heartRate"
-                        name="Heart Rate"
-                        stroke="#ffffff"
-                        strokeWidth={1}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
+                        dataKey="restingHr"
+                        name="Resting HR"
+                        strokeWidth={2}
+                        dot={false}
                       />
                     )}
 
-                    {/* Mood = BLUE, uses hidden axis (0–5) */}
                     {hasMood && visibleLines.mood && (
                       <Line
-                        yAxisId="mood"
+                        yAxisId="left"
                         type="monotone"
                         dataKey="mood"
                         name="Mood"
-                        stroke="#4ea8ff"
-                        strokeWidth={1}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
+                        strokeWidth={2}
+                        dot={false}
                       />
                     )}
                   </LineChart>
@@ -304,19 +273,19 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
                 </button>
               )}
 
-              {hasHeartRate && (
+              {hasRestingHr && (
                 <button
                   type="button"
-                  onClick={() => toggleLine("heartRate")}
+                  onClick={() => toggleLine("restingHr")}
                   className={cn(
                     "px-3 py-1 rounded-full border text-xs sm:text-sm flex items-center gap-2",
-                    visibleLines.heartRate
+                    visibleLines.restingHr
                       ? "bg-white/10 border-white text-white"
                       : "bg-transparent border-white/40 text-white/70",
                   )}
                 >
                   <span className="inline-block h-2 w-6 rounded-full bg-white" />
-                  Heart Rate
+                  Resting HR
                 </button>
               )}
 
@@ -327,27 +296,14 @@ const CombinedDailyMetricsChart: React.FC<CombinedDailyMetricsChartProps> = ({
                   className={cn(
                     "px-3 py-1 rounded-full border text-xs sm:text-sm flex items-center gap-2",
                     visibleLines.mood
-                      ? "bg-sky-500/20 border-sky-400 text-sky-200"
-                      : "bg-transparent border-sky-700 text-sky-400/70",
+                      ? "bg-accent/20 border-accent text-accent"
+                      : "bg-transparent border-accent/40 text-accent/70",
                   )}
                 >
-                  <span className="inline-block h-2 w-6 rounded-full bg-sky-400" />
+                  <span className="inline-block h-2 w-6 rounded-full bg-accent" />
                   Mood
                 </button>
               )}
-            </div>
-
-            {/* Full-screen expand button (like Blynk) */}
-            <div className="mt-3 flex justify-end">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full border border-[var(--card-border)] bg-background/60 hover:bg-background sm:h-7 sm:w-7"
-                onClick={() => navigate("/stats/daily/full")}
-              >
-                <Maximize2 className="h-3.5 w-3.5" />
-              </Button>
             </div>
           </>
         )}

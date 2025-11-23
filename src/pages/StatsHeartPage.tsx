@@ -1,4 +1,4 @@
-// src/pages/StatsHeartPage.tsx
+﻿// src/pages/StatsHeartPage.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -16,62 +16,40 @@ import { format, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/auth/AuthContext";
-import {
-  fetchEntriesForLastNDays,
-  DailyEntry,
-} from "@/data/dailyEntriesSupabase";
+import { fetchMetricsLastNDays, DailyMetrics } from "@/data/dailyMetricsSupabase";
 
-type HeartDatum = {
+type RestingHrDatum = {
   name: string;
-  heartRate: number;
+  restingHr: number;
 };
 
 const StatsHeartPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-
-  const [data, setData] = useState<HeartDatum[]>([]);
+  const [data, setData] = useState<RestingHrDatum[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rangeDays, setRangeDays] = useState<number>(28);
 
   useEffect(() => {
-    if (!user) {
-      setData([]);
-      setLoading(false);
-      return;
-    }
-
     let cancelled = false;
 
-    const load = async () => {
+    const run = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
 
-        const entries: DailyEntry[] = await fetchEntriesForLastNDays(
-          user.id,
-          rangeDays,
-          new Date(),
-        );
+        const metrics: DailyMetrics[] = await fetchMetricsLastNDays(user.id, 60);
 
-        if (!Array.isArray(entries)) {
-          console.error(
-            "[StatsHeartPage] fetchEntriesForLastNDays did not return an array:",
-            entries,
-          );
-          if (!cancelled) setData([]);
-          return;
-        }
-
-        const rows: HeartDatum[] = entries
-          .filter(
-            (entry) =>
-              entry.heartRate !== null && entry.heartRate !== undefined,
-          )
-          .map((entry) => {
-            const d = parseISO(entry.date);
+        const rows: RestingHrDatum[] = (metrics ?? [])
+          .filter((m) => m.restingHr !== null && m.restingHr !== undefined)
+          .map((m) => {
+            const d = parseISO(m.date);
             return {
               name: format(d, "MMM dd"),
-              heartRate: entry.heartRate!,
+              restingHr: m.restingHr as number,
             };
           });
 
@@ -84,106 +62,60 @@ const StatsHeartPage: React.FC = () => {
       }
     };
 
-    load();
-
+    run();
     return () => {
       cancelled = true;
     };
-  }, [user?.id, rangeDays]);
-
-  const rangeOptions = [7, 14, 28, 56];
+  }, [user?.id]);
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-3 pb-6 pt-4">
-      {/* Header */}
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Heart Rate Focus
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Strip away the clutter and just track heart rate over time for
-            recovery, overload, and red-flag days.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate("/stats")}
-          className="self-start"
-        >
+    <div className="max-w-5xl mx-auto px-4 py-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold text-text-main">Resting HR Trend</h2>
+        <Button variant="outline" onClick={() => navigate("/stats")}>
           Back to Stats
         </Button>
-      </header>
+      </div>
 
-      {/* Chart card */}
-      <Card className="rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)]/80 px-3 py-4 sm:px-5 sm:py-5 flex flex-col">
-        <CardHeader className="flex flex-row items-center justify-between pb-4 pt-1">
-          <CardTitle className="text-lg font-semibold text-accent">
-            Daily Heart Rate (bpm)
+      <Card className="bg-card/60 border-border shadow-md">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg text-text-main">
+            Resting HR (bpm)
           </CardTitle>
-          <div className="flex gap-2">
-            {rangeOptions.map((days) => (
-              <Button
-                key={days}
-                variant={rangeDays === days ? "default" : "outline"}
-                size="sm"
-                onClick={() => setRangeDays(days)}
-              >
-                {days}d
-              </Button>
-            ))}
-          </div>
         </CardHeader>
 
-        <CardContent className="flex-1 flex flex-col pt-2">
+        <CardContent className="pt-2">
           {loading ? (
-            <div className="flex h-64 items-center justify-center text-muted-foreground">
-              Loading heart rate…
+            <div className="flex items-center justify-center h-64 text-text-muted">
+              Loading...
             </div>
           ) : data.length === 0 ? (
-            <div className="flex h-64 items-center justify-center text-muted-foreground">
-              No heart rate data available yet for this period.
+            <div className="flex items-center justify-center h-64 text-text-muted">
+              No resting HR data yet.
             </div>
           ) : (
-            <div className="h-[320px] sm:h-[380px]">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={data}
-                  margin={{ top: 10, right: 20, left: 10, bottom: 5 }}
+                  margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
                 >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--line-subtle)"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    stroke="var(--text-muted)"
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis
-                    stroke="#ffffff"
-                    label={{
-                      value: "bpm",
-                      angle: -90,
-                      position: "insideLeft",
-                      fill: "#ffffff",
-                    }}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} domain={["auto", "auto"]} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "var(--card)",
-                      border: "1px solid var(--card-border)",
-                      color: "var(--text-main)",
+                      background: "rgba(10,10,10,0.9)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 8,
                     }}
-                    formatter={(value) => [`${value} bpm`, "Heart Rate"]}
+                    labelStyle={{ color: "white" }}
                   />
                   <Line
                     type="monotone"
-                    dataKey="heartRate"
-                    name="Heart Rate"
-                    stroke="#ffffff"
-                    strokeWidth={1}
+                    dataKey="restingHr"
+                    name="Resting HR"
+                    strokeWidth={2}
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
                   />
