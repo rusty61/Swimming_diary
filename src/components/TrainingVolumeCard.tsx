@@ -76,7 +76,8 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
           placeholder="Enter km"
           value={trainingVolume}
           onChange={handleTrainingVolumeChange}
-          className="w-full !bg-input text-center text-3xl font-bold py-5 border-border text-foreground rounded-full"
+          className="w-full !bg-input text-center text-2xl font-bold py-2 rounded-full"
+
         />
       </CardContent>
     </Card>
