@@ -61,19 +61,24 @@ export async function upsertDailyMetrics(
   patch: Partial<DailyMetrics> & { date: string }
 ) {
   try {
-    const row = {
+    // Base row: always include identity + updated_at
+    const row: any = {
       user_id: userId,
       date: patch.date,
-      rpe: patch.rpe ?? null,
-      resting_hr: patch.restingHr ?? null,
-      sleep_hours: patch.sleepHours ?? null,
-      note_sentiment: patch.noteSentiment ?? null,
-      fatigue_tag: patch.fatigueTag ?? undefined,
-      stress_tag: patch.stressTag ?? undefined,
-      pain_tag: patch.painTag ?? undefined,
-      confidence_tag: patch.confidenceTag ?? undefined,
       updated_at: new Date().toISOString(),
     };
+
+    // Only include fields that are actually present in patch.
+    // This prevents wiping other columns to null.
+    if ("rpe" in patch) row.rpe = patch.rpe ?? null;
+    if ("restingHr" in patch) row.resting_hr = patch.restingHr ?? null;
+    if ("sleepHours" in patch) row.sleep_hours = patch.sleepHours ?? null;
+    if ("noteSentiment" in patch) row.note_sentiment = patch.noteSentiment ?? null;
+
+    if ("fatigueTag" in patch) row.fatigue_tag = patch.fatigueTag ?? 0;
+    if ("stressTag" in patch) row.stress_tag = patch.stressTag ?? 0;
+    if ("painTag" in patch) row.pain_tag = patch.painTag ?? 0;
+    if ("confidenceTag" in patch) row.confidence_tag = patch.confidenceTag ?? 0;
 
     const { error } = await supabase
       .from("daily_metrics")
@@ -81,7 +86,8 @@ export async function upsertDailyMetrics(
 
     if (error) throw error;
     return true;
-  } catch {
+  } catch (e) {
+    console.error("upsertDailyMetrics failed:", e);
     return false;
   }
 }
