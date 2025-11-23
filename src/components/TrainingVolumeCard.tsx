@@ -59,24 +59,24 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
   return (
     <Card
       className={cn(
-        "bg-card text-foreground shadow-md border border-white/80", // <-- white border
+        "bg-card text-foreground shadow-md border border-white/80",
         className
       )}
     >
-      <CardHeader className="pb-2">
-        <CardTitle className="text-2xl font-bold flex items-center text-accent">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-2xl font-bold text-accent">
           Training Distance (km)
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="p-4 pt-0">
+      <CardContent className="px-6 pb-6 pt-0">
         <Input
           type="number"
           step="0.1"
           placeholder="Enter km"
           value={trainingVolume}
           onChange={handleTrainingVolumeChange}
-          className="w-full !bg-input text-center text-3xl font-bold py-4 border-border text-foreground"
+          className="w-full !bg-input text-center text-3xl font-bold py-5 border-border text-foreground rounded-full"
         />
       </CardContent>
     </Card>
