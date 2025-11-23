@@ -16,9 +16,8 @@ const SessionLogPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dataVersion, setDataVersion] = useState(0);
 
-  // IMPORTANT: do not rerender/remount on every save
   const handleDataSaved = () => {
-    // no-op on log page (saves are live anyway)
+    // no-op on log page
   };
 
   const applyDateSelection = () => {
@@ -59,31 +58,32 @@ const SessionLogPage: React.FC = () => {
           </div>
         </header>
 
-        {/* Main content: distance + notes */}
+        {/* One grid: left stack + right notes */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          <TrainingVolumeCard
-            key={`vol-${dataVersion}`}
-            selectedDate={selectedDate}
-            onSaved={handleDataSaved}
-          />
+          {/* LEFT COLUMN STACK */}
+          <div className="flex flex-col gap-6">
+            <TrainingVolumeCard
+              key={`vol-${dataVersion}`}
+              selectedDate={selectedDate}
+              onSaved={handleDataSaved}
+            />
 
+            <RPECard
+              key={`rpe-${dataVersion}`}
+              selectedDate={selectedDate}
+              onSaved={handleDataSaved}
+            />
+
+            <RestingHRCard
+              key={`resthr-${dataVersion}`}
+              selectedDate={selectedDate}
+              onSaved={handleDataSaved}
+            />
+          </div>
+
+          {/* RIGHT COLUMN */}
           <DailyNotesCard
             key={`notes-${dataVersion}`}
-            selectedDate={selectedDate}
-            onSaved={handleDataSaved}
-          />
-        </section>
-
-        {/* Intensity + Recovery section */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start mt-6">
-          <RPECard
-            key={`rpe-${dataVersion}`}
-            selectedDate={selectedDate}
-            onSaved={handleDataSaved}
-          />
-
-          <RestingHRCard
-            key={`resthr-${dataVersion}`}
             selectedDate={selectedDate}
             onSaved={handleDataSaved}
           />
