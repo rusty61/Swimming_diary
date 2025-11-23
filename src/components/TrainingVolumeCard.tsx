@@ -82,6 +82,9 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
             // slim like RPE input, not tall pill
             className="w-full !bg-background/70 text-center text-2xl font-bold py-2 rounded-full"
           />
+		  <p className="text-xs text-muted-foreground mt-2">
+            Work out or get the distance from your coach.
+          </p>
         </div>
       </CardContent>
     </Card>

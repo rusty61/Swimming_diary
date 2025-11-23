@@ -59,7 +59,7 @@ const RPECard: React.FC<RPECardProps> = ({ selectedDate, onSaved, className }) =
             placeholder="Enter RPE"
             value={rpe}
             onChange={handleChange}
-            className="w-full !bg-background/70"
+            className="w-full !bg-background/70 text-center"
           />
           <p className="text-xs text-muted-foreground mt-2">
             Rate how hard today felt overall.

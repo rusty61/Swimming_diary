@@ -69,7 +69,7 @@ const RestingHRCard: React.FC<RestingHRCardProps> = ({
             placeholder="Morning HR"
             value={restingHr}
             onChange={handleChange}
-            className="w-full !bg-background/70"
+            className="w-full !bg-background/70 text-center"
           />
           <p className="text-xs text-muted-foreground mt-2">
             Best taken on waking, before training.
