@@ -30,19 +30,24 @@ const rowToEntry = (row: any): DailyEntry => ({
 });
 
 /**
- * HARDEN date handling:
- * Accepts "yyyy-MM-dd", ISO, or JS Date string; returns "yyyy-MM-dd".
- * This prevents PostgREST trying to parse "GMT+1100".
+ * Normalize ANY date-like input to "yyyy-MM-dd" (Postgres DATE safe).
+ * Accepts:
+ *  - Date object
+ *  - "yyyy-MM-dd"
+ *  - ISO string
+ *  - JS Date string like "Tue Nov 18 2025 ... GMT+1100"
  */
-const toDateStr = (input: string): string => {
-  // If it is already yyyy-MM-dd, keep it
+const toDateStr = (input: Date | string): string => {
+  if (input instanceof Date) return format(input, "yyyy-MM-dd");
+
+  // already yyyy-MM-dd
   if (/^\d{4}-\d{2}-\d{2}$/.test(input)) return input;
 
-  // Try ISO parse first
+  // try ISO
   const iso = parseISO(input);
   if (isValid(iso)) return format(iso, "yyyy-MM-dd");
 
-  // Fall back to native Date parse (handles "Tue Nov 18 2025 ... GMT+1100")
+  // fallback native parse
   const d = new Date(input);
   if (isNaN(d.getTime())) {
     throw new Error(`Invalid date input: ${input}`);
@@ -65,7 +70,7 @@ export const fetchAllEntriesForUser = async (
 
 export const fetchEntryForDate = async (
   userId: string,
-  date: string
+  date: Date | string
 ): Promise<DailyEntry | null> => {
   const dateStr = toDateStr(date);
 
@@ -82,7 +87,7 @@ export const fetchEntryForDate = async (
 
 export const upsertDailyEntry = async (
   userId: string,
-  patch: Partial<DailyEntry> & { date: string }
+  patch: Partial<DailyEntry> & { date: Date | string }
 ): Promise<DailyEntry> => {
   const dateStr = toDateStr(patch.date);
 
