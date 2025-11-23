@@ -74,7 +74,7 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="p-6 flex-1 flex items-end">
+      <CardContent className="p-4">
         <div className="w-full">
           <Input
             type="number"
@@ -82,7 +82,7 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
             placeholder="Enter km"
             value={trainingVolume}
             onChange={handleTrainingVolumeChange}
-            className="w-full !bg-input text-center text-4xl font-bold py-8 border-border text-foreground"
+            className="w-full !bg-input text-center text-3xl font-bold py-4 border-border text-foreground"
           />
         </div>
       </CardContent>
