@@ -1,7 +1,7 @@
 // src/pages/SessionLogPage.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import TrainingVolumeCard from "@/components/TrainingVolumeCard";
@@ -17,12 +17,20 @@ const SessionLogPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dataVersion, setDataVersion] = useState(0);
 
+  // debounce timer so we don't rerender on every keystroke
+  const saveTimerRef = useRef<number | null>(null);
+
   const handleDataSaved = () => {
-    setDataVersion(v => v + 1);
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+    saveTimerRef.current = window.setTimeout(() => {
+      setDataVersion((v) => v + 1);
+    }, 800);
   };
 
   const applyDateSelection = () => {
-    setDataVersion(v => v + 1);
+    setDataVersion((v) => v + 1);
   };
 
   return (
@@ -43,7 +51,10 @@ const SessionLogPage: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 justify-start md:justify-end">
-            <DatePicker selectedDate={selectedDate} onDateChange={setSelectedDate} />
+            <DatePicker
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+            />
             <button
               onClick={applyDateSelection}
               className="px-6 py-2 text-xs sm:text-sm font-semibold text-accent bg-black/20 hover:bg-black/30 transition rounded-full"
@@ -63,7 +74,6 @@ const SessionLogPage: React.FC = () => {
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
               className="h-full min-h-[260px]"
-              key={`vol-${dataVersion}`}
             />
           </div>
 
@@ -72,19 +82,17 @@ const SessionLogPage: React.FC = () => {
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
               className="h-full min-h-[260px]"
-              key={`notes-${dataVersion}`}
             />
           </div>
         </section>
 
-        {/* NEW: Intensity + Recovery section */}
+        {/* Intensity + Recovery section */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start mt-6">
           <div className="h-full">
             <RPECard
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
               className="h-full min-h-[220px]"
-              key={`rpe-${dataVersion}`}
             />
           </div>
 
@@ -93,7 +101,6 @@ const SessionLogPage: React.FC = () => {
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
               className="h-full min-h-[220px]"
-              key={`resthr-${dataVersion}`}
             />
           </div>
         </section>

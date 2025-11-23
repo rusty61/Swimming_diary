@@ -12,11 +12,16 @@ import { cn } from "@/lib/utils";
 interface InteractiveMoodCardProps {
   selectedDate: Date;
   onMoodChange: (mood: MoodValue | null) => void;
-  onSaved?: () => void; // New prop
+  onSaved?: () => void;
   className?: string;
 }
 
-const InteractiveMoodCard: React.FC<InteractiveMoodCardProps> = ({ selectedDate, onMoodChange, onSaved, className }) => {
+const InteractiveMoodCard: React.FC<InteractiveMoodCardProps> = ({
+  selectedDate,
+  onMoodChange,
+  onSaved,
+  className,
+}) => {
   const { user } = useAuth();
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
   const [currentMood, setCurrentMood] = useState<MoodValue | null>(null);
@@ -24,21 +29,21 @@ const InteractiveMoodCard: React.FC<InteractiveMoodCardProps> = ({ selectedDate,
   useEffect(() => {
     const loadMood = async () => {
       if (!user) return;
-      const entry = await fetchEntryForDate(user.id, selectedDate);
+      const entry = await fetchEntryForDate(user.id, formattedDate);
       setCurrentMood((entry?.mood as MoodValue) || null);
     };
     loadMood();
-  }, [selectedDate, user]);
+  }, [formattedDate, user]);
 
   const handleMoodSelect = async (mood: MoodValue | null) => {
     if (!user) return;
     setCurrentMood(mood);
     onMoodChange(mood);
     await upsertDailyEntry(user.id, { date: formattedDate, mood: mood || 0 });
-    onSaved?.(); // Call onSaved after successful upsert
+    onSaved?.();
   };
 
-    return (
+  return (
     <Card
       className={cn(
         "bg-card text-foreground shadow-md border-card-border h-full flex flex-col",
@@ -51,11 +56,14 @@ const InteractiveMoodCard: React.FC<InteractiveMoodCardProps> = ({ selectedDate,
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6 flex-1 flex justify-center items-center">
-        <MoodSelector value={currentMood} onChange={handleMoodSelect} className="scale-150" />
+        <MoodSelector
+          value={currentMood}
+          onChange={handleMoodSelect}
+          className="scale-150"
+        />
       </CardContent>
     </Card>
   );
 };
-
 
 export default InteractiveMoodCard;
