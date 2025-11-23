@@ -59,26 +59,30 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
   return (
     <Card
       className={cn(
-        "bg-card text-foreground shadow-md border border-white/80",
+        // match ticked cards: full-height column card
+        "h-full flex flex-col justify-between bg-card text-foreground shadow-md border border-white/80",
         className
       )}
     >
-      <CardHeader className="pb-3">
-        <CardTitle className="text-2xl font-bold text-accent">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-2xl font-bold flex items-center text-accent">
           Training Distance (km)
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="px-6 pb-6 pt-0">
-        <Input
-          type="number"
-          step="0.1"
-          placeholder="Enter km"
-          value={trainingVolume}
-          onChange={handleTrainingVolumeChange}
-          className="w-full !bg-input text-center text-2xl font-bold py-2 rounded-full"
-
-        />
+      {/* match ticked cards: content fills remaining height and pushes input down */}
+      <CardContent className="p-6 flex-1 flex items-end">
+        <div className="w-full">
+          <Input
+            type="number"
+            step="0.1"
+            placeholder="Enter km"
+            value={trainingVolume}
+            onChange={handleTrainingVolumeChange}
+            // slim like RPE input, not tall pill
+            className="w-full !bg-background/70 text-center text-2xl font-bold py-2 rounded-full"
+          />
+        </div>
       </CardContent>
     </Card>
   );
