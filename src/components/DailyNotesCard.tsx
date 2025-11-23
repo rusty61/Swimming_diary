@@ -7,9 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/auth/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
 import { showError, showSuccess } from "@/utils/toast";
+import { cn } from "@/lib/utils"; // <-- added
 
 type DailyNotesCardProps = {
   selectedDate: Date;
+  className?: string; // <-- added
 };
 
 type NotesState = {
@@ -38,7 +40,7 @@ const emptyNotes: NotesState = {
   positive: "",
 };
 
-const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
+const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate, className }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -48,8 +50,6 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
     () => format(selectedDate, "yyyy-MM-dd"),
     [selectedDate]
   );
-
-  // ───────────────── LOAD EXISTING NOTES FOR USER + DATE ─────────────────
 
   const {
     data: rows,
@@ -76,7 +76,6 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
     },
   });
 
-  // When query result or date changes, push into local state
   useEffect(() => {
     if (!rows || rows.length === 0) {
       setNotes(emptyNotes);
@@ -97,7 +96,6 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
           next.positive = row.content ?? "";
           break;
         default:
-          // ignore unknown types for now
           break;
       }
     }
@@ -105,14 +103,11 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
     setNotes(next);
   }, [rows, entryDateStr]);
 
-  // ───────────────── SAVE / UPSERT NOTES ─────────────────
-
   const saveMutation = useMutation({
     mutationFn: async (payload: DailyNoteRow[]) => {
       const { error } = await supabase
         .from("daily_notes")
         .upsert(payload, {
-          // This matches your unique index (user_id, entry_date, note_type)
           onConflict: "user_id,entry_date,note_type",
         });
 
@@ -173,13 +168,17 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
   const loading = isLoading || isFetching;
 
   return (
-    <section className="mt-8 w-full rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-md">
+    <section
+      className={cn(
+        "mt-8 w-full rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-6 shadow-md",
+        className // <-- added so Log tab can stretch it
+      )}
+    >
       <div className="mb-4 flex items-center justify-between gap-4">
         <h2 className="text-lg font-semibold text-[var(--accent-soft)]">
           Daily Notes for {format(selectedDate, "d MMMM yyyy")}
         </h2>
 
-        {/* Custom Save Notes button with green text & outline */}
         <button
           type="button"
           onClick={handleSave}
@@ -195,7 +194,6 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
       )}
 
       <div className="space-y-6">
-        {/* Technique & Physical Insight */}
         <div>
           <h3 className="text-sm font-semibold tracking-wide text-[var(--text-main)]">
             Technique &amp; Physical Insight
@@ -213,7 +211,6 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
           />
         </div>
 
-        {/* Nutrition & Hydration */}
         <div>
           <h3 className="text-sm font-semibold tracking-wide text-[var(--text-main)]">
             Nutrition &amp; Hydration
@@ -231,7 +228,6 @@ const DailyNotesCard: React.FC<DailyNotesCardProps> = ({ selectedDate }) => {
           />
         </div>
 
-        {/* Something Positive About Today */}
         <div>
           <h3 className="text-sm font-semibold tracking-wide text-[var(--text-main)]">
             Something Positive About Today
