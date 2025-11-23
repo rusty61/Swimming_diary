@@ -21,7 +21,7 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
   const [trainingVolume, setTrainingVolume] = useState<string>("");
 
-  // *** FIX: reset old data immediately on date change
+  // reset old data immediately on date change
   useEffect(() => {
     setTrainingVolume("");
   }, [formattedDate]);
@@ -31,7 +31,6 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
       if (!user) return;
       const entry = await fetchEntryForDate(user.id, formattedDate);
 
-      // strict null check
       const value =
         entry?.trainingVolume === null ||
         entry?.trainingVolume === undefined
@@ -64,17 +63,18 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
   return (
     <Card
       className={cn(
-        "bg-card text-foreground shadow-md border-card-border h-full flex flex-col",
+        // IMPORTANT: no h-full / flex-grow here -> card stays compact
+        "bg-card text-foreground shadow-md border-card-border",
         className,
       )}
     >
-      <CardHeader>
+      <CardHeader className="pb-2">
         <CardTitle className="text-2xl font-bold flex items-center text-accent">
           Training Distance (km)
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="p-4">
+      <CardContent className="p-4 pt-0">
         <div className="w-full">
           <Input
             type="number"

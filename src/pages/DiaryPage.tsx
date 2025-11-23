@@ -42,7 +42,6 @@ const DiaryPage: React.FC = () => {
     console.log("Mood changed to:", mood);
   };
 
-  // Update button now bumps dataVersion to remount cards (reload data)
   const applyDateSelection = () => {
     setDataVersion((v) => v + 1);
     showSuccess("Date applied — cards refreshed.");
@@ -72,14 +71,12 @@ const DiaryPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background text-foreground relative">
       <div className="max-w-7xl mx-auto py-8 z-10 relative">
-        {/* Page title at the very top */}
         <div className="mb-4 flex justify-center">
           <h1 className="text-3xl sm:text-4xl font-semibold text-text-main">
             Your Daily Diary
           </h1>
         </div>
 
-        {/* Navigation for Diary/Stats */}
         <nav className="flex justify-center gap-4 mb-8">
           <Button
             onClick={handleOpenDiary}
@@ -105,9 +102,7 @@ const DiaryPage: React.FC = () => {
         </nav>
 
         <main className="px-4">
-          {/* ===== Diary Section ===== */}
           <section ref={diaryRef} className="mb-16">
-            {/* Date row */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <DatePicker
                 selectedDate={selectedDate}
@@ -124,8 +119,8 @@ const DiaryPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Metric Cards Container */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-stretch">
+            {/* IMPORTANT: items-start prevents short cards being stretched tall */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-start">
               <InteractiveMoodCard
                 key={`mood-${dataVersion}`}
                 selectedDate={selectedDate}
@@ -134,11 +129,11 @@ const DiaryPage: React.FC = () => {
                 className="h-full"
               />
 
+              {/* no h-full -> stays compact */}
               <TrainingVolumeCard
                 key={`vol-${dataVersion}`}
                 selectedDate={selectedDate}
                 onSaved={handleDataSaved}
-                className="h-full"
               />
 
               <HeartRateCard
@@ -148,24 +143,23 @@ const DiaryPage: React.FC = () => {
                 className="h-full"
               />
 
-              {/* RPE stays left (X position) */}
+              {/* RPE left, natural height */}
               <RPECard
                 key={`rpe-${dataVersion}`}
                 selectedDate={selectedDate}
                 onSaved={handleDataSaved}
-                className="h-full md:col-start-1"
+                className="md:col-start-1"
               />
 
-              {/* Resting HR forced to right (O position) */}
+              {/* Resting HR right, natural height */}
               <RestingHRCard
                 key={`resthr-${dataVersion}`}
                 selectedDate={selectedDate}
                 onSaved={handleDataSaved}
-                className="h-full md:col-start-3"
+                className="md:col-start-3"
               />
             </div>
 
-            {/* Readiness / Risk card */}
             <div className="mb-8">
               <ReadinessRiskCard
                 key={`risk-${dataVersion}`}
@@ -173,7 +167,6 @@ const DiaryPage: React.FC = () => {
               />
             </div>
 
-            {/* Notes + Motivation */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
               <DailyNotesCard
                 key={`notes-${dataVersion}`}
@@ -183,7 +176,6 @@ const DiaryPage: React.FC = () => {
               <MotivationBoostCard />
             </div>
 
-            {/* Weekly summary */}
             <div className="mb-8">
               <WeeklySummaryCard
                 selectedDate={selectedDate}
@@ -199,7 +191,6 @@ const DiaryPage: React.FC = () => {
             </div>
           </section>
 
-          {/* ===== Stats Section ===== */}
           <section ref={statsRef}>
             {/* Keep your stats layout unchanged */}
           </section>
