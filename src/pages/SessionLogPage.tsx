@@ -61,44 +61,32 @@ const SessionLogPage: React.FC = () => {
 
         {/* Main content: distance + notes */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          <div className="h-full">
-            <TrainingVolumeCard
-              key={`vol-${dataVersion}`}
-              selectedDate={selectedDate}
-              onSaved={handleDataSaved}
-              className="h-full min-h-[260px]"
-            />
-          </div>
+          <TrainingVolumeCard
+            key={`vol-${dataVersion}`}
+            selectedDate={selectedDate}
+            onSaved={handleDataSaved}
+          />
 
-          <div className="h-full">
-            <DailyNotesCard
-              key={`notes-${dataVersion}`}
-              selectedDate={selectedDate}
-              onSaved={handleDataSaved}
-              className="h-full min-h-[260px]"
-            />
-          </div>
+          <DailyNotesCard
+            key={`notes-${dataVersion}`}
+            selectedDate={selectedDate}
+            onSaved={handleDataSaved}
+          />
         </section>
 
         {/* Intensity + Recovery section */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start mt-6">
-          <div className="h-full">
-            <RPECard
-              key={`rpe-${dataVersion}`}
-              selectedDate={selectedDate}
-              onSaved={handleDataSaved}
-              className="h-full min-h-[220px]"
-            />
-          </div>
+          <RPECard
+            key={`rpe-${dataVersion}`}
+            selectedDate={selectedDate}
+            onSaved={handleDataSaved}
+          />
 
-          <div className="h-full">
-            <RestingHRCard
-              key={`resthr-${dataVersion}`}
-              selectedDate={selectedDate}
-              onSaved={handleDataSaved}
-              className="h-full min-h-[220px]"
-            />
-          </div>
+          <RestingHRCard
+            key={`resthr-${dataVersion}`}
+            selectedDate={selectedDate}
+            onSaved={handleDataSaved}
+          />
         </section>
       </div>
     </div>
