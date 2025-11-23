@@ -29,7 +29,30 @@ const rowToEntry = (row: any): DailyEntry => ({
   updatedAt: row.updated_at,
 });
 
-export const fetchAllEntriesForUser = async (userId: string): Promise<DailyEntry[]> => {
+/**
+ * HARDEN date handling:
+ * Accepts "yyyy-MM-dd", ISO, or JS Date string; returns "yyyy-MM-dd".
+ * This prevents PostgREST trying to parse "GMT+1100".
+ */
+const toDateStr = (input: string): string => {
+  // If it is already yyyy-MM-dd, keep it
+  if (/^\d{4}-\d{2}-\d{2}$/.test(input)) return input;
+
+  // Try ISO parse first
+  const iso = parseISO(input);
+  if (isValid(iso)) return format(iso, "yyyy-MM-dd");
+
+  // Fall back to native Date parse (handles "Tue Nov 18 2025 ... GMT+1100")
+  const d = new Date(input);
+  if (isNaN(d.getTime())) {
+    throw new Error(`Invalid date input: ${input}`);
+  }
+  return format(d, "yyyy-MM-dd");
+};
+
+export const fetchAllEntriesForUser = async (
+  userId: string
+): Promise<DailyEntry[]> => {
   const { data, error } = await supabase
     .from("daily_entries")
     .select("*")
@@ -44,11 +67,13 @@ export const fetchEntryForDate = async (
   userId: string,
   date: string
 ): Promise<DailyEntry | null> => {
+  const dateStr = toDateStr(date);
+
   const { data, error } = await supabase
     .from("daily_entries")
     .select("*")
     .eq("user_id", userId)
-    .eq("date", date)
+    .eq("date", dateStr)
     .maybeSingle();
 
   if (error) throw error;
@@ -59,9 +84,11 @@ export const upsertDailyEntry = async (
   userId: string,
   patch: Partial<DailyEntry> & { date: string }
 ): Promise<DailyEntry> => {
+  const dateStr = toDateStr(patch.date);
+
   const row = {
     user_id: userId,
-    date: patch.date,
+    date: dateStr,
     mood: patch.mood ?? undefined,
     heart_rate: patch.heartRate ?? undefined,
     training_volume: patch.trainingVolume ?? undefined,
@@ -82,7 +109,8 @@ export const upsertDailyEntry = async (
   // -------- Option A risk compute (safe/no-crash) ----------
   try {
     // Pull last 42 days of entries
-    const fromDate = format(subDays(new Date(patch.date), 42), "yyyy-MM-dd");
+    const fromDate = format(subDays(new Date(dateStr), 42), "yyyy-MM-dd");
+
     const { data: recentEntries } = await supabase
       .from("daily_entries")
       .select("*")
@@ -94,12 +122,12 @@ export const upsertDailyEntry = async (
 
     await computeAndSaveOptionARisk(
       userId,
-      patch.date,
+      dateStr,
       (recentEntries ?? []).map(rowToEntry),
       metricsRows
     );
   } catch {
-    // swallow errors (tables may not exist yet)
+    // swallow errors (tables may not exist yet / no data yet)
   }
 
   return saved;
