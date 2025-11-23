@@ -148,19 +148,20 @@ const DiaryPage: React.FC = () => {
                 className="h-full"
               />
 
-              {/* NEW: daily_metrics cards */}
+              {/* RPE stays left (X position) */}
               <RPECard
                 key={`rpe-${dataVersion}`}
                 selectedDate={selectedDate}
                 onSaved={handleDataSaved}
-                className="h-full"
+                className="h-full md:col-start-1"
               />
 
+              {/* Resting HR forced to right (O position) */}
               <RestingHRCard
                 key={`resthr-${dataVersion}`}
                 selectedDate={selectedDate}
                 onSaved={handleDataSaved}
-                className="h-full"
+                className="h-full md:col-start-3"
               />
             </div>
 
