@@ -20,6 +20,15 @@ interface DatePickerProps {
 }
 
 export function DatePicker({ selectedDate, onDateChange, className }: DatePickerProps) {
+  // FIX 1: shadcn Calendar can emit undefined (toggle-off). Ignore it.
+  const handleSelect = (date?: Date) => {
+    if (!date || isNaN(date.getTime())) return; // keep current date
+    onDateChange(date);
+  };
+
+  const isValidSelected =
+    selectedDate instanceof Date && !isNaN(selectedDate.getTime());
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -32,14 +41,20 @@ export function DatePicker({ selectedDate, onDateChange, className }: DatePicker
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+          {/* FIX 2: guard format() so Invalid Date can't crash */}
+          {isValidSelected ? format(selectedDate, "PPP") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 bg-white text-gray-900 border-border" align="start">
+
+      <PopoverContent
+        className="w-auto p-0 bg-white text-gray-900 border-border"
+        align="start"
+      >
         <Calendar
           mode="single"
           selected={selectedDate}
-          onSelect={onDateChange}
+          // FIX 3: use guarded handler instead of raw onDateChange
+          onSelect={handleSelect}
           initialFocus
           className="calendar-red-dates"
           captionLayout="dropdown"
