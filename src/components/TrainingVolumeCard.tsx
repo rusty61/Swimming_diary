@@ -21,19 +21,24 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
   const [trainingVolume, setTrainingVolume] = useState<string>("");
 
+  // *** FIX: reset old data immediately on date change
+  useEffect(() => {
+    setTrainingVolume("");
+  }, [formattedDate]);
+
   useEffect(() => {
     const loadTrainingVolume = async () => {
       if (!user) return;
       const entry = await fetchEntryForDate(user.id, formattedDate);
-      if (
-        entry &&
-        entry.trainingVolume !== undefined &&
-        entry.trainingVolume !== null
-      ) {
-        setTrainingVolume(entry.trainingVolume.toString());
-      } else {
-        setTrainingVolume("");
-      }
+
+      // strict null check
+      const value =
+        entry?.trainingVolume === null ||
+        entry?.trainingVolume === undefined
+          ? ""
+          : entry.trainingVolume.toString();
+
+      setTrainingVolume(value);
     };
     loadTrainingVolume();
   }, [formattedDate, user]);
@@ -42,13 +47,17 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     if (!user) return;
+
     const value = e.target.value;
     setTrainingVolume(value);
+
     const numValue = value === "" ? null : parseFloat(value);
+
     await upsertDailyEntry(user.id, {
       date: formattedDate,
       trainingVolume: numValue,
     });
+
     onSaved?.();
   };
 

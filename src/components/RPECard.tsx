@@ -21,7 +21,12 @@ const RPECard: React.FC<RPECardProps> = ({ selectedDate, onSaved, className }) =
     const load = async () => {
       if (!user) return;
       const met = await fetchMetricsForDate(user.id, formattedDate);
-      setRpe(met?.rpe != null ? String(met.rpe) : "");
+      setRpe(
+  met?.rpe === null || met?.rpe === undefined
+    ? ""
+    : String(met.rpe)
+);
+
     };
     load();
   }, [user, formattedDate]);

@@ -12,27 +12,44 @@ interface RestingHRCardProps {
   className?: string;
 }
 
-const RestingHRCard: React.FC<RestingHRCardProps> = ({ selectedDate, onSaved, className }) => {
+const RestingHRCard: React.FC<RestingHRCardProps> = ({
+  selectedDate,
+  onSaved,
+  className,
+}) => {
   const { user } = useAuth();
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
   const [restingHr, setRestingHr] = useState("");
+
+  // *** FIX: clear state before fetching new date
+  useEffect(() => {
+    setRestingHr("");
+  }, [formattedDate]);
 
   useEffect(() => {
     const load = async () => {
       if (!user) return;
       const met = await fetchMetricsForDate(user.id, formattedDate);
-      setRestingHr(met?.restingHr != null ? String(met.restingHr) : "");
+
+      const value =
+        met?.restingHr === null || met?.restingHr === undefined
+          ? ""
+          : String(met.restingHr);
+
+      setRestingHr(value);
     };
     load();
   }, [user, formattedDate]);
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) return;
+
     const value = e.target.value;
     setRestingHr(value);
+
     const num = value === "" ? null : parseFloat(value);
 
-    await upsertDailyMetrics(user.id, { date: formattedDate, restingHr: num ?? null });
+    await upsertDailyMetrics(user.id, { date: formattedDate, restingHr: num });
     onSaved?.();
   };
 
