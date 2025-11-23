@@ -31,6 +31,9 @@ const DiaryPage = () => {
   const diaryRef = useRef<HTMLDivElement | null>(null);
   const statsRef = useRef<HTMLDivElement | null>(null);
 
+  // NEW: debounce timer for onSaved spam
+  const saveTimerRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (selectedSection === "diary") {
       diaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -49,8 +52,24 @@ const DiaryPage = () => {
     setDataVersion((v) => v + 1);
   };
 
+  /**
+   * FIX:
+   * onSaved fires a LOT (often per keystroke).
+   * If we bump dataVersion each time, whole page rerenders and inputs jump/lose focus.
+   *
+   * - In Diary tab: don't bump at all.
+   * - In Stats tab: debounce so graphs refresh nicely.
+   */
   const handleDataSaved = () => {
-    setDataVersion((v) => v + 1);
+    if (selectedSection !== "stats") return;
+
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = window.setTimeout(() => {
+      setDataVersion((v) => v + 1);
+    }, 800);
   };
 
   const handleLogout = async () => {
@@ -192,7 +211,7 @@ const DiaryPage = () => {
               />
             </div>
 
-            {/* NEW: Readiness / Risk card */}
+            {/* Readiness / Risk card */}
             <div className="mb-8">
               <ReadinessRiskCard selectedDate={selectedDate} />
             </div>
