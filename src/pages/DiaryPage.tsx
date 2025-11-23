@@ -9,6 +9,7 @@ import TrainingVolumeCard from "@/components/TrainingVolumeCard";
 import DailyNotesCard from "@/components/DailyNotesCard";
 import MotivationBoostCard from "@/components/MotivationBoostCard";
 import WeeklySummaryCard from "@/components/WeeklySummaryCard";
+import ReadinessRiskCard from "@/components/ReadinessRiskCard";
 import { DatePicker } from "@/components/DatePicker";
 import { useAuth } from "@/auth/AuthContext";
 import { showError, showSuccess } from "@/utils/toast";
@@ -189,6 +190,11 @@ const DiaryPage = () => {
                 onSaved={handleDataSaved}
                 className="h-full"
               />
+            </div>
+
+            {/* NEW: Readiness / Risk card */}
+            <div className="mb-8">
+              <ReadinessRiskCard selectedDate={selectedDate} />
             </div>
 
             {/* Daily Notes Card Container */}
