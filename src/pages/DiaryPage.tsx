@@ -31,7 +31,7 @@ const DiaryPage = () => {
   const diaryRef = useRef<HTMLDivElement | null>(null);
   const statsRef = useRef<HTMLDivElement | null>(null);
 
-  // NEW: debounce timer for onSaved spam
+  // debounce timer for onSaved spam
   const saveTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -46,19 +46,14 @@ const DiaryPage = () => {
     console.log("Mood changed to:", mood);
   };
 
-  // Update button now just bumps the dataVersion to refresh stats/cards,
-  // the date itself is already controlled live by the DatePicker.
+  // Update button now bumps dataVersion to remount cards (reload data)
   const applyDateSelection = () => {
     setDataVersion((v) => v + 1);
   };
 
   /**
-   * FIX:
    * onSaved fires a LOT (often per keystroke).
-   * If we bump dataVersion each time, whole page rerenders and inputs jump/lose focus.
-   *
-   * - In Diary tab: don't bump at all.
-   * - In Stats tab: debounce so graphs refresh nicely.
+   * We only refresh stats tab, and debounce it.
    */
   const handleDataSaved = () => {
     if (selectedSection !== "stats") return;
@@ -131,7 +126,7 @@ const DiaryPage = () => {
           </Button>
         </nav>
 
-        {/* Motivation Boost Card (always visible, random quote from list) */}
+        {/* Motivation Boost Card (always visible) */}
         <div className="mb-8 max-w-5xl mx-auto px-4">
           <MotivationBoostCard />
         </div>
@@ -147,7 +142,6 @@ const DiaryPage = () => {
           >
             {/* Daily Entry + Date + Update + Logout */}
             <div className="mt-2 mb-4 grid grid-cols-1 gap-4 md:grid-cols-4 items-center">
-              {/* 1. Daily Entry label + Review Notes button */}
               <div className="flex items-center justify-start gap-3">
                 <h2 className="text-2xl sm:text-3xl font-semibold text-text-main">
                   Daily Entry
@@ -162,7 +156,6 @@ const DiaryPage = () => {
                 </Button>
               </div>
 
-              {/* 2. Date picker */}
               <div className="flex justify-center">
                 <DatePicker
                   selectedDate={selectedDate}
@@ -170,7 +163,6 @@ const DiaryPage = () => {
                 />
               </div>
 
-              {/* 3. Update button */}
               <div className="flex justify-center">
                 <button
                   onClick={applyDateSelection}
@@ -180,7 +172,6 @@ const DiaryPage = () => {
                 </button>
               </div>
 
-              {/* 4. Logout button */}
               <div className="flex justify-end">
                 <Button
                   onClick={handleLogout}
@@ -194,17 +185,20 @@ const DiaryPage = () => {
             {/* Metric Cards Container */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-stretch">
               <InteractiveMoodCard
+                key={`mood-${dataVersion}`}
                 selectedDate={selectedDate}
                 onMoodChange={handleMoodChange}
                 onSaved={handleDataSaved}
                 className="h-full"
               />
               <TrainingVolumeCard
+                key={`vol-${dataVersion}`}
                 selectedDate={selectedDate}
                 onSaved={handleDataSaved}
                 className="h-full"
               />
               <HeartRateCard
+                key={`hr-${dataVersion}`}
                 selectedDate={selectedDate}
                 onSaved={handleDataSaved}
                 className="h-full"
@@ -213,12 +207,16 @@ const DiaryPage = () => {
 
             {/* Readiness / Risk card */}
             <div className="mb-8">
-              <ReadinessRiskCard selectedDate={selectedDate} />
+              <ReadinessRiskCard
+                key={`risk-${dataVersion}`}
+                selectedDate={selectedDate}
+              />
             </div>
 
             {/* Daily Notes Card Container */}
             <div className="mb-8">
               <DailyNotesCard
+                key={`notes-${dataVersion}`}
                 selectedDate={selectedDate}
                 onSaved={handleDataSaved}
                 className="h-80"
@@ -234,26 +232,21 @@ const DiaryPage = () => {
             style={{ display: selectedSection === "stats" ? "block" : "none" }}
           >
             <div className="flex flex-col items-center gap-8">
-              {/* Heading + buttons row */}
               <div className="w-full max-w-4xl flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <h2 className="text-3xl md:text-4xl font-semibold text-text-main text-center md:text-left">
                   Your Weekly Stats
                 </h2>
 
                 <div className="flex flex-wrap gap-3 justify-center md:justify-end">
-                  {/* NEW button: graph-only page */}
                   <Button variant="outline" size="sm" asChild>
                     <Link to="/stats/trend">View Metrics Trend</Link>
                   </Button>
-
-                  {/* Existing full stats page */}
                   <Button variant="outline" size="sm" asChild>
                     <Link to="/stats">View Full Stats Page</Link>
                   </Button>
                 </div>
               </div>
 
-              {/* Weekly summary only (graph moved to its own page) */}
               <div className="w-full max-w-4xl flex flex-col gap-8">
                 <WeeklySummaryCard
                   selectedDate={selectedDate}

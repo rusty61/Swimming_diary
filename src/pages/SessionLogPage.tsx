@@ -1,7 +1,6 @@
-// src/pages/SessionLogPage.tsx
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import TrainingVolumeCard from "@/components/TrainingVolumeCard";
@@ -17,16 +16,9 @@ const SessionLogPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dataVersion, setDataVersion] = useState(0);
 
-  // debounce timer so we don't rerender on every keystroke
-  const saveTimerRef = useRef<number | null>(null);
-
+  // IMPORTANT: do not rerender/remount on every save
   const handleDataSaved = () => {
-    if (saveTimerRef.current) {
-      window.clearTimeout(saveTimerRef.current);
-    }
-    saveTimerRef.current = window.setTimeout(() => {
-      setDataVersion((v) => v + 1);
-    }, 800);
+    // no-op on log page (saves are live anyway)
   };
 
   const applyDateSelection = () => {
@@ -71,6 +63,7 @@ const SessionLogPage: React.FC = () => {
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           <div className="h-full">
             <TrainingVolumeCard
+              key={`vol-${dataVersion}`}
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
               className="h-full min-h-[260px]"
@@ -79,6 +72,7 @@ const SessionLogPage: React.FC = () => {
 
           <div className="h-full">
             <DailyNotesCard
+              key={`notes-${dataVersion}`}
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
               className="h-full min-h-[260px]"
@@ -90,6 +84,7 @@ const SessionLogPage: React.FC = () => {
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start mt-6">
           <div className="h-full">
             <RPECard
+              key={`rpe-${dataVersion}`}
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
               className="h-full min-h-[220px]"
@@ -98,6 +93,7 @@ const SessionLogPage: React.FC = () => {
 
           <div className="h-full">
             <RestingHRCard
+              key={`resthr-${dataVersion}`}
               selectedDate={selectedDate}
               onSaved={handleDataSaved}
               className="h-full min-h-[220px]"
