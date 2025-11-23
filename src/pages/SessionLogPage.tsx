@@ -17,7 +17,7 @@ const SessionLogPage: React.FC = () => {
   const [dataVersion, setDataVersion] = useState(0);
 
   const handleDataSaved = () => {
-    // no-op on log page
+    // no-op on log page (saves are live)
   };
 
   const applyDateSelection = () => {
@@ -58,10 +58,10 @@ const SessionLogPage: React.FC = () => {
           </div>
         </header>
 
-        {/* One grid: left stack + right notes */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          {/* LEFT COLUMN STACK */}
-          <div className="flex flex-col gap-6">
+        {/* ONE grid, stretch height so left column matches notes height */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+          {/* LEFT COLUMN: full height, spread cards top/middle/bottom */}
+          <div className="flex flex-col h-full justify-between">
             <TrainingVolumeCard
               key={`vol-${dataVersion}`}
               selectedDate={selectedDate}
@@ -81,11 +81,12 @@ const SessionLogPage: React.FC = () => {
             />
           </div>
 
-          {/* RIGHT COLUMN */}
+          {/* RIGHT COLUMN: notes takes the full column height */}
           <DailyNotesCard
             key={`notes-${dataVersion}`}
             selectedDate={selectedDate}
             onSaved={handleDataSaved}
+            className="h-full"
           />
         </section>
       </div>

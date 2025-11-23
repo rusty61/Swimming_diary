@@ -21,7 +21,6 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
   const formattedDate = format(selectedDate, "yyyy-MM-dd");
   const [trainingVolume, setTrainingVolume] = useState<string>("");
 
-  // reset old data immediately on date change
   useEffect(() => {
     setTrainingVolume("");
   }, [formattedDate]);
@@ -30,20 +29,17 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
     const loadTrainingVolume = async () => {
       if (!user) return;
       const entry = await fetchEntryForDate(user.id, formattedDate);
-
       const value =
-        entry?.trainingVolume === null ||
-        entry?.trainingVolume === undefined
+        entry?.trainingVolume === null || entry?.trainingVolume === undefined
           ? ""
           : entry.trainingVolume.toString();
-
       setTrainingVolume(value);
     };
     loadTrainingVolume();
   }, [formattedDate, user]);
 
   const handleTrainingVolumeChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     if (!user) return;
 
@@ -63,9 +59,8 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
   return (
     <Card
       className={cn(
-        // IMPORTANT: no h-full / flex-grow here -> card stays compact
-        "bg-card text-foreground shadow-md border-card-border",
-        className,
+        "bg-card text-foreground shadow-md border border-white/80", // <-- white border
+        className
       )}
     >
       <CardHeader className="pb-2">
@@ -75,16 +70,14 @@ const TrainingVolumeCard: React.FC<TrainingVolumeCardProps> = ({
       </CardHeader>
 
       <CardContent className="p-4 pt-0">
-        <div className="w-full">
-          <Input
-            type="number"
-            step="0.1"
-            placeholder="Enter km"
-            value={trainingVolume}
-            onChange={handleTrainingVolumeChange}
-            className="w-full !bg-input text-center text-3xl font-bold py-4 border-border text-foreground"
-          />
-        </div>
+        <Input
+          type="number"
+          step="0.1"
+          placeholder="Enter km"
+          value={trainingVolume}
+          onChange={handleTrainingVolumeChange}
+          className="w-full !bg-input text-center text-3xl font-bold py-4 border-border text-foreground"
+        />
       </CardContent>
     </Card>
   );
