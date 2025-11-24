@@ -1,10 +1,11 @@
 /* public/sw.js */
-/* Simple Vite-friendly service worker for offline + caching */
+/* PWA SW: keeps home-screen app in sync with latest deploy */
 
-const CACHE_NAME = "blackline-pwa-v1";
+const SW_VERSION = "v2";                // <<< bump this on every deploy
+const CACHE_NAME = `blackline-pwa-${SW_VERSION}`;
+
+// Only icons/manifest here. DON'T pin /index.html long-term.
 const CORE_ASSETS = [
-  "/",                 // app shell
-  "/index.html",
   "/site.webmanifest",
   "/blackline_transparent_180x180.png",
   "/blackline_transparent_167x167.png",
@@ -15,7 +16,6 @@ const CORE_ASSETS = [
   "/blackline_favicon.ico"
 ];
 
-// Install: cache core assets
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS))
@@ -23,7 +23,6 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// Activate: clean old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -33,16 +32,14 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch:
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Only handle same-origin requests
   if (url.origin !== self.location.origin) return;
 
-  // Navigation requests (page loads): network-first, cache fallback
-  if (req.mode === "navigate") {
+  // 1) HTML / navigation: ALWAYS network-first.
+  if (req.mode === "navigate" || req.destination === "document") {
     event.respondWith(
       fetch(req)
         .then((res) => {
@@ -55,20 +52,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets: cache-first, update in background
-  const dest = req.destination; // script, style, image, font, etc.
-  if (["script", "style", "image", "font"].includes(dest)) {
+  // 2) Static assets (scripts/styles/images/fonts): cache-first.
+  if (["script", "style", "image", "font"].includes(req.destination)) {
     event.respondWith(
       caches.match(req).then((cached) => {
         if (cached) return cached;
 
-        return fetch(req)
-          .then((res) => {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-            return res;
-          })
-          .catch(() => cached);
+        return fetch(req).then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          return res;
+        });
       })
     );
   }
