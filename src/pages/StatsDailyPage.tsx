@@ -25,27 +25,27 @@ const friendlyDriver = (d: string) => {
 
   m = s.match(/Rising load:\s*ACWR\s*([0-9.]+)/i);
   if (m) {
-    return `Training has climbed quickly lately — keep recovery solid so the work actually turns into speed.`;
+    return `Training has climbed quickly lately — keep recovery solid so this work turns into speed.`;
   }
 
   m = s.match(/Resting HR \+(\d+)\s*bpm/i);
   if (m) {
-    return `Morning heart rate is up ~${m[1]} bpm — that’s a common tired-body signal, so go easier and sleep well.`;
+    return `Morning heart rate is up ~${m[1]} bpm — common tired-body signal, so go easier and sleep well.`;
   }
   if (/Resting HR elevated/i.test(s)) {
     return `Morning heart rate has been a bit higher lately — watch fatigue and take an easier day if needed.`;
   }
 
   if (/Mood ↓/i.test(s) || /Mood down/i.test(s)) {
-    return `Mood has been lower than normal lately — that often means you’re carrying fatigue and need better recovery.`;
+    return `Mood has been lower than normal lately — that often means you’re carrying fatigue.`;
   }
 
   if (/Fatigue noted/i.test(s)) {
-    return `You’ve felt tired a few times this week — that’s your body asking for a reset day.`;
+    return `You’ve felt tired a few times this week — your body’s asking for a reset day.`;
   }
 
   if (/Stress noted|Stress flagged/i.test(s)) {
-    return `Stress has popped up a few times this week — keep things simple and recover well.`;
+    return `Stress has popped up a few times this week — keep sessions simple and recover well.`;
   }
 
   if (/Pain\/soreness noted|Pain noted/i.test(s)) {
@@ -53,7 +53,7 @@ const friendlyDriver = (d: string) => {
   }
 
   if (/Performance risk high/i.test(s)) {
-    return `A few signals together suggest you might feel slower for a bit — recovery will bring you back up.`;
+    return `A few signals together suggest a short performance dip risk — recovery will bring you back up.`;
   }
 
   return s;
@@ -78,7 +78,6 @@ const StatsDailyPage: React.FC = () => {
     setRefreshKey((k) => k + 1);
   };
 
-  // fetch risk so we can show raw (left) + friendly (right)
   useEffect(() => {
     const loadRisk = async () => {
       if (!user) {
@@ -132,30 +131,32 @@ const StatsDailyPage: React.FC = () => {
           </Button>
         </div>
 
-        {/* ===== Two-column layout (left ~80% / right ~20%) ===== */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-start">
-          {/* LEFT COLUMN (~80%) */}
-          <div className="md:col-span-4 space-y-6">
-            {/* Risk card (no friendly why here anymore) */}
+        {/* ===== Clean 2-panel layout ===== */}
+        <div className="flex flex-col md:flex-row gap-6 items-start">
+          {/* LEFT PANEL (flexes) */}
+          <div className="flex-1 space-y-6 min-w-0">
+            {/* Risk card */}
             <ReadinessRiskCard
               selectedDate={selectedDate}
               refreshKey={refreshKey}
               className="w-full"
             />
 
-            {/* RAW WHY (red YES) above graph */}
+            {/* RAW WHY (in a small card so it looks tidy) */}
             {rawDrivers.length > 0 && (
-              <div className="px-1">
-                <p className="text-sm font-semibold mb-1">Why (raw):</p>
-                <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
-                  {rawDrivers.slice(0, 3).map((d, i) => (
-                    <li key={i}>{d}</li>
-                  ))}
-                </ul>
-              </div>
+              <Card className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)]/70">
+                <CardContent className="py-3">
+                  <p className="text-sm font-semibold mb-1">Why (raw):</p>
+                  <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+                    {rawDrivers.slice(0, 3).map((d, i) => (
+                      <li key={i}>{d}</li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
             )}
 
-            {/* BIG trend chart (wider to the right now) */}
+            {/* BIG trend chart */}
             <div className="flex justify-center">
               <div className="w-full max-w-6xl h-[520px]">
                 <CombinedDailyMetricsChart
@@ -169,9 +170,9 @@ const StatsDailyPage: React.FC = () => {
             </div>
           </div>
 
-          {/* RIGHT COLUMN (~20%) — bigger blue takeaway box */}
-          <div className="md:col-span-1">
-            <Card className="rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)]/80 shadow-md md:min-h-[760px] flex flex-col">
+          {/* RIGHT PANEL (wider so text reads normally) */}
+          <div className="w-full md:w-[340px] lg:w-[380px] shrink-0">
+            <Card className="rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)]/80 shadow-md min-h-[640px] flex flex-col">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg font-semibold text-accent">
                   Today’s takeaway
