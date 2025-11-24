@@ -1,7 +1,7 @@
 /* public/sw.js */
 /* PWA SW: keeps home-screen app in sync with latest deploy */
 
-const SW_VERSION = "v2";                // <<< bump this on every deploy
+const SW_VERSION = "v3";                // <<< bump this on every deploy
 const CACHE_NAME = `blackline-pwa-${SW_VERSION}`;
 
 // Only icons/manifest here. DON'T pin /index.html long-term.
