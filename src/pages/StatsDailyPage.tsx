@@ -12,49 +12,27 @@ import { useAuth } from "@/auth/AuthContext";
 import { fetchRiskForDate } from "@/data/dailyMetricsSupabase";
 import { format } from "date-fns";
 
-// teen-friendly takeaway mapper (slightly longer text)
+// slightly longer teen-friendly takeaway
 const friendlyDriver = (d: string) => {
   const s = d ?? "";
-
   let m = s.match(/Load spike:\s*ACWR\s*([0-9.]+)/i);
   if (m) {
     const v = Number(m[1]);
     const times = isFinite(v) ? v.toFixed(1) : m[1];
-    return `You trained about ${times}× your usual this week — take 1–2 lighter days so your body can catch up and you don’t feel flat.`;
+    return `You trained about ${times}× your usual this week — take 1–2 lighter days so your body catches up and you don’t feel flat.`;
   }
-
   m = s.match(/Rising load:\s*ACWR\s*([0-9.]+)/i);
-  if (m) {
-    return `Training has climbed quickly lately — keep recovery solid so this work turns into speed.`;
-  }
+  if (m) return `Training has climbed quickly lately — keep recovery strong so this turns into speed.`;
 
   m = s.match(/Resting HR \+(\d+)\s*bpm/i);
-  if (m) {
-    return `Morning heart rate is up ~${m[1]} bpm — common tired-body signal, so go easier and sleep well.`;
-  }
-  if (/Resting HR elevated/i.test(s)) {
-    return `Morning heart rate has been a bit higher lately — watch fatigue and take an easier day if needed.`;
-  }
+  if (m) return `Morning heart rate is up ~${m[1]} bpm — common tired-body sign, so go easier and sleep well.`;
+  if (/Resting HR elevated/i.test(s)) return `Morning heart rate has been a bit higher lately — watch fatigue and recover.`;
 
-  if (/Mood ↓/i.test(s) || /Mood down/i.test(s)) {
-    return `Mood has been lower than normal lately — that often means you’re carrying fatigue.`;
-  }
-
-  if (/Fatigue noted/i.test(s)) {
-    return `You’ve felt tired a few times this week — your body’s asking for a reset day.`;
-  }
-
-  if (/Stress noted|Stress flagged/i.test(s)) {
-    return `Stress has popped up a few times this week — keep sessions simple and recover well.`;
-  }
-
-  if (/Pain\/soreness noted|Pain noted/i.test(s)) {
-    return `More soreness has shown up this week — don’t push through it, back off a little.`;
-  }
-
-  if (/Performance risk high/i.test(s)) {
-    return `A few signals together suggest a short performance dip risk — recovery will bring you back up.`;
-  }
+  if (/Mood ↓|Mood down/i.test(s)) return `Mood has been lower than normal lately — that often means fatigue is building.`;
+  if (/Fatigue noted/i.test(s)) return `You’ve felt tired a few times this week — your body’s asking for a reset.`;
+  if (/Stress noted|Stress flagged/i.test(s)) return `Stress has popped up a few times — keep things simple and recover well.`;
+  if (/Pain\/soreness noted|Pain noted/i.test(s)) return `More soreness has shown up — back off a little instead of forcing it.`;
+  if (/Performance risk high/i.test(s)) return `A few signals together suggest a short dip risk — recovery brings you back.`;
 
   return s;
 };
@@ -74,9 +52,7 @@ const StatsDailyPage: React.FC = () => {
     drivers: string[];
   } | null>(null);
 
-  const applyDate = () => {
-    setRefreshKey((k) => k + 1);
-  };
+  const applyDate = () => setRefreshKey((k) => k + 1);
 
   useEffect(() => {
     const loadRisk = async () => {
@@ -97,7 +73,6 @@ const StatsDailyPage: React.FC = () => {
         drivers: r.drivers ?? [],
       });
     };
-
     loadRisk();
   }, [user?.id, selectedDate.getTime(), refreshKey]);
 
@@ -117,12 +92,9 @@ const StatsDailyPage: React.FC = () => {
           </Button>
         </div>
 
-        {/* Date + update controls */}
+        {/* Date + update */}
         <div className="mb-8 flex flex-wrap gap-4 items-center justify-center md:justify-start">
-          <DatePicker
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-          />
+          <DatePicker selectedDate={selectedDate} onDateChange={setSelectedDate} />
           <Button
             onClick={applyDate}
             className="px-6 py-2 text-sm font-semibold tracking-[0.14em] uppercase"
@@ -131,18 +103,60 @@ const StatsDailyPage: React.FC = () => {
           </Button>
         </div>
 
-        {/* ===== Clean 2-panel layout ===== */}
-        <div className="flex flex-col md:flex-row gap-6 items-start">
-          {/* LEFT PANEL (flexes) */}
-          <div className="flex-1 space-y-6 min-w-0">
-            {/* Risk card */}
-            <ReadinessRiskCard
-              selectedDate={selectedDate}
-              refreshKey={refreshKey}
-              className="w-full"
-            />
+        {/* ===== Two-panel layout ===== */}
+        <div className="flex flex-col md:flex-row gap-6 items-stretch">
+          {/* LEFT PANEL */}
+          <div className="flex-1 min-w-0 space-y-6">
+            {/* Top row left card (same height as right) */}
+            <div className="flex flex-col md:flex-row gap-6 items-stretch">
+              <div className="flex-1">
+                <ReadinessRiskCard
+                  selectedDate={selectedDate}
+                  refreshKey={refreshKey}
+                  hideWhy={true}
+                  className="w-full h-full"
+                />
+              </div>
 
-            {/* RAW WHY (in a small card so it looks tidy) */}
+              {/* Top row right red takeaway box */}
+              <div className="w-full md:w-[380px] shrink-0">
+                <Card className="rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)]/80 shadow-md h-full min-h-[220px] flex flex-col">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-semibold text-accent">
+                      Today’s takeaway
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 flex-1">
+                    {friendlyDrivers.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No takeaway yet — log a few days of training + RPE.
+                      </p>
+                    ) : (
+                      <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-3">
+                        {friendlyDrivers.slice(0, 3).map((d, i) => (
+                          <li key={i}>{d}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Graphs pushed far left (no centering) */}
+            <div className="w-full h-[520px]">
+              <CombinedDailyMetricsChart
+                selectedDate={selectedDate}
+                rangeDays={rangeDays}
+                setRangeDays={setRangeDays}
+                refreshKey={refreshKey}
+                className="h-full w-full"
+              />
+            </div>
+          </div>
+
+          {/* RIGHT PANEL under takeaway = moved green raw box */}
+          <div className="w-full md:w-[380px] shrink-0 space-y-6">
             {rawDrivers.length > 0 && (
               <Card className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)]/70">
                 <CardContent className="py-3">
@@ -155,46 +169,9 @@ const StatsDailyPage: React.FC = () => {
                 </CardContent>
               </Card>
             )}
-
-            {/* BIG trend chart */}
-            <div className="flex justify-center">
-              <div className="w-full max-w-6xl h-[520px]">
-                <CombinedDailyMetricsChart
-                  selectedDate={selectedDate}
-                  rangeDays={rangeDays}
-                  setRangeDays={setRangeDays}
-                  refreshKey={refreshKey}
-                  className="h-full"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT PANEL (wider so text reads normally) */}
-          <div className="w-full md:w-[340px] lg:w-[380px] shrink-0">
-            <Card className="rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)]/80 shadow-md min-h-[640px] flex flex-col">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-semibold text-accent">
-                  Today’s takeaway
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 flex-1">
-                {friendlyDrivers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No takeaway yet — log a few days of training + RPE.
-                  </p>
-                ) : (
-                  <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-3">
-                    {friendlyDrivers.slice(0, 3).map((d, i) => (
-                      <li key={i}>{d}</li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
           </div>
         </div>
-        {/* ===== end layout ===== */}
+        {/* ===== end ===== */}
       </div>
     </div>
   );
