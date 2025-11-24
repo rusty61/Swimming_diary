@@ -65,7 +65,7 @@ const ReadinessRiskCard: React.FC<Props> = ({
     <Card className={cn("h-full", className)}>
       <CardHeader className="pb-2">
         <CardTitle className="text-xl font-bold text-accent">
-          Readiness / Risk (Option A)
+          Readiness / Risk 
         </CardTitle>
       </CardHeader>
 
