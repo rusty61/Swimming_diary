@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/DatePicker";
 import CombinedDailyMetricsChart from "@/components/CombinedDailyMetricsChart";
+import ReadinessRiskCard from "@/components/ReadinessRiskCard";
 
 const StatsDailyPage: React.FC = () => {
   const navigate = useNavigate();
@@ -42,6 +43,15 @@ const StatsDailyPage: React.FC = () => {
           >
             Update
           </Button>
+        </div>
+
+        {/* Readiness / Risk card for selected date */}
+        <div className="mb-8">
+          <ReadinessRiskCard
+            selectedDate={selectedDate}
+            refreshKey={refreshKey}
+            className="w-full"
+          />
         </div>
 
         {/* BIG trend chart */}
