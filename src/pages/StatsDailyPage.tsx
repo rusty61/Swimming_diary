@@ -16,19 +16,48 @@ import { fetchRiskForDate } from "@/data/dailyMetricsSupabase";
 // athlete-friendly takeaway mapper
 const friendlyDriver = (d: string) => {
   const s = d ?? "";
+  const lower = s.toLowerCase();
 
-  let m = s.match(/Load spike:\s*ACWR\s*([0-9.]+)/i);
+  // ---------- ACWR / LOAD SPIKE PATTERNS ----------
+  // New style: "ACWR > 1.3 for 13 days"
+  let m = s.match(/ACWR\s*>\s*([0-9.]+)\s*for\s*(\d+)\s*days/i);
+  if (m) {
+    const thresh = m[1];
+    const days = m[2];
+    return `Your training has been above your normal level for about ${days} days (ACWR > ${thresh}). That’s a sign to add a lighter day or two so the work turns into speed.`;
+  }
+
+  // New style: "ACWR high (1.73)"
+  m = s.match(/ACWR\s*high\s*\(?\s*([0-9.]+)\s*\)?/i);
+  if (m) {
+    const v = Number(m[1]);
+    const acwr = isFinite(v) ? v.toFixed(2) : m[1];
+    return `Your recent training load is quite a bit higher than your usual (ACWR ${acwr}). Keep recovery tight — sleep, food, and maybe a lighter session — so you don’t slide into fatigue.`;
+  }
+
+  // Existing style: "Load spike: ACWR x.x"
+  m = s.match(/Load spike:\s*ACWR\s*([0-9.]+)/i);
   if (m) {
     const v = Number(m[1]);
     const times = isFinite(v) ? v.toFixed(1) : m[1];
-    return `You trained about ${times} X your usual amount this week — take 1–2 lighter days so your body catches up.`;
+    return `You trained about ${times}× your usual amount this week — take 1–2 lighter days so your body catches up.`;
   }
 
+  // New style: "Load spike +100% vs 4w avg" / "+80% vs 4w avg"
+  m = s.match(/Load spike\s*\+?\s*([0-9.]+)\s*%\s*vs\s*4w\s*avg/i);
+  if (m) {
+    const pct = Number(m[1]);
+    const p = isFinite(pct) ? pct.toFixed(0) : m[1];
+    return `Your training jumped about +${p}% compared to your 4-week average. Big jumps are OK sometimes, but you’ll get more out of it with an easy day soon.`;
+  }
+
+  // Existing style: "Rising load: ACWR x.x"
   m = s.match(/Rising load:\s*ACWR\s*([0-9.]+)/i);
   if (m) {
     return `Training has climbed quickly lately — keep recovery strong so this work turns into speed.`;
   }
 
+  // ---------- HEART RATE PATTERNS ----------
   m = s.match(/Resting HR \+(\d+)\s*bpm/i);
   if (m) {
     return `Morning heart rate is up ~${m[1]} bpm — common tired-body sign, so go easier and sleep well.`;
@@ -37,8 +66,14 @@ const friendlyDriver = (d: string) => {
     return `Morning heart rate has been higher lately — watch fatigue and take an easier day if needed.`;
   }
 
+  // ---------- MOOD / WELLBEING PATTERNS ----------
   if (/Mood ↓|Mood down/i.test(s)) {
     return `Mood has been lower than normal lately — that often means fatigue is building.`;
+  }
+
+  // New style: "Mood below baseline"
+  if (lower.includes("mood below baseline")) {
+    return `Your mood has been sitting below your normal level lately. That usually means you’re carrying fatigue — back off a bit and recharge.`;
   }
 
   if (/Fatigue noted/i.test(s)) {
@@ -53,6 +88,7 @@ const friendlyDriver = (d: string) => {
     return `More soreness has shown up — back off a little instead of forcing it.`;
   }
 
+  // ---------- PERFORMANCE / RISK FLAGS ----------
   if (/Performance risk high/i.test(s)) {
     return `Your body is showing several small signs of fatigue at the same time — recovery will bring you back up.`;
   }
