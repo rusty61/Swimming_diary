@@ -21,7 +21,7 @@ const friendlyDriver = (d: string) => {
   if (m) {
     const v = Number(m[1]);
     const times = isFinite(v) ? v.toFixed(1) : m[1];
-    return `You trained about ${times}× your usual this week — take 1–2 lighter days so your body catches up and you don’t feel flat.`;
+    return `You trained about ${times} more than your usual this week — take 1–2 lighter days so your body catches up and you don’t feel flat.`;
   }
 
   m = s.match(/Rising load:\s*ACWR\s*([0-9.]+)/i);
@@ -35,7 +35,7 @@ const friendlyDriver = (d: string) => {
   if (/Fatigue noted/i.test(s)) return `You’ve felt tired a few times this week — your body’s asking for a reset.`;
   if (/Stress noted|Stress flagged/i.test(s)) return `Stress has popped up a few times — keep things simple and recover well.`;
   if (/Pain\/soreness noted|Pain noted/i.test(s)) return `More soreness has shown up — back off a little instead of forcing it.`;
-  if (/Performance risk high/i.test(s)) return `A few signals together suggest a short dip risk — recovery brings you back.`;
+  if (/Performance risk high/i.test(s)) return `“Your body is showing several small signs of fatigue at the same time, recovery will bring you back.`;
 
   return s;
 };
@@ -126,22 +126,9 @@ const StatsDailyPage: React.FC = () => {
                     ))}
                   </ul>
                 )}
-              </CardContent>
-            </Card>
+              
 
-            {/* RAW WHY clearly separated under takeaway */}
-            {rawDrivers.length > 0 && (
-              <Card className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)]/70">
-                <CardContent className="py-3">
-                  <p className="text-sm font-semibold mb-1">Why (raw):</p>
-                  <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
-                    {rawDrivers.slice(0, 3).map((d, i) => (
-                      <li key={i}>{d}</li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
+           
           </div>
         </div>
 
