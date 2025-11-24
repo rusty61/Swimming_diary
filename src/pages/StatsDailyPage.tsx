@@ -3,6 +3,8 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/DatePicker";
 import CombinedDailyMetricsChart from "@/components/CombinedDailyMetricsChart";
@@ -10,17 +12,18 @@ import ReadinessRiskCard from "@/components/ReadinessRiskCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/auth/AuthContext";
 import { fetchRiskForDate } from "@/data/dailyMetricsSupabase";
-import { format } from "date-fns";
 
-// slightly longer teen-friendly takeaway
+// teen-friendly takeaway (slightly longer, still simple)
 const friendlyDriver = (d: string) => {
   const s = d ?? "";
+
   let m = s.match(/Load spike:\s*ACWR\s*([0-9.]+)/i);
   if (m) {
     const v = Number(m[1]);
     const times = isFinite(v) ? v.toFixed(1) : m[1];
     return `You trained about ${times}× your usual this week — take 1–2 lighter days so your body catches up and you don’t feel flat.`;
   }
+
   m = s.match(/Rising load:\s*ACWR\s*([0-9.]+)/i);
   if (m) return `Training has climbed quickly lately — keep recovery strong so this turns into speed.`;
 
@@ -42,15 +45,10 @@ const StatsDailyPage: React.FC = () => {
   const { user } = useAuth();
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [rangeDays, setRangeDays] = useState<number>(7);
+  const [rangeDays, setRangeDays] = useState<number>(14);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const [risk, setRisk] = useState<{
-    overtrainRisk: number;
-    motivationRisk: number;
-    performanceRisk: number;
-    drivers: string[];
-  } | null>(null);
+  const [risk, setRisk] = useState<{ drivers: string[] } | null>(null);
 
   const applyDate = () => setRefreshKey((k) => k + 1);
 
@@ -66,12 +64,7 @@ const StatsDailyPage: React.FC = () => {
         setRisk(null);
         return;
       }
-      setRisk({
-        overtrainRisk: r.overtrainRisk,
-        motivationRisk: r.motivationRisk,
-        performanceRisk: r.performanceRisk,
-        drivers: r.drivers ?? [],
-      });
+      setRisk({ drivers: r.drivers ?? [] });
     };
     loadRisk();
   }, [user?.id, selectedDate.getTime(), refreshKey]);
@@ -82,7 +75,7 @@ const StatsDailyPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header row */}
+        {/* Header */}
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <h1 className="text-3xl md:text-4xl font-semibold text-text-main">
             Daily Metrics Trend
@@ -92,7 +85,7 @@ const StatsDailyPage: React.FC = () => {
           </Button>
         </div>
 
-        {/* Date + update */}
+        {/* Date controls */}
         <div className="mb-8 flex flex-wrap gap-4 items-center justify-center md:justify-start">
           <DatePicker selectedDate={selectedDate} onDateChange={setSelectedDate} />
           <Button
@@ -103,60 +96,40 @@ const StatsDailyPage: React.FC = () => {
           </Button>
         </div>
 
-        {/* ===== Two-panel layout ===== */}
-        <div className="flex flex-col md:flex-row gap-6 items-stretch">
-          {/* LEFT PANEL */}
-          <div className="flex-1 min-w-0 space-y-6">
-            {/* Top row left card (same height as right) */}
-            <div className="flex flex-col md:flex-row gap-6 items-stretch">
-              <div className="flex-1">
-                <ReadinessRiskCard
-                  selectedDate={selectedDate}
-                  refreshKey={refreshKey}
-                  hideWhy={true}
-                  className="w-full h-full"
-                />
-              </div>
+        {/* ===== TOP ROW: clean 2-col professional layout ===== */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch mb-6">
+          {/* LEFT: Risk (full width, not crammed) */}
+          <ReadinessRiskCard
+            selectedDate={selectedDate}
+            refreshKey={refreshKey}
+            hideWhy={true}
+            className="w-full h-full"
+          />
 
-              {/* Top row right red takeaway box */}
-              <div className="w-full md:w-[380px] shrink-0">
-                <Card className="rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)]/80 shadow-md h-full min-h-[220px] flex flex-col">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-semibold text-accent">
-                      Today’s takeaway
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 flex-1">
-                    {friendlyDrivers.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        No takeaway yet — log a few days of training + RPE.
-                      </p>
-                    ) : (
-                      <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-3">
-                        {friendlyDrivers.slice(0, 3).map((d, i) => (
-                          <li key={i}>{d}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+          {/* RIGHT: Takeaway + Raw why stacked */}
+          <div className="space-y-6 h-full">
+            <Card className="rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)]/80 shadow-md h-full">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-semibold text-accent">
+                  Today’s takeaway
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {friendlyDrivers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No takeaway yet — log a few days of training + RPE.
+                  </p>
+                ) : (
+                  <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-3">
+                    {friendlyDrivers.slice(0, 3).map((d, i) => (
+                      <li key={i}>{d}</li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
 
-            {/* Graphs pushed far left (no centering) */}
-            <div className="w-full h-[520px]">
-              <CombinedDailyMetricsChart
-                selectedDate={selectedDate}
-                rangeDays={rangeDays}
-                setRangeDays={setRangeDays}
-                refreshKey={refreshKey}
-                className="h-full w-full"
-              />
-            </div>
-          </div>
-
-          {/* RIGHT PANEL under takeaway = moved green raw box */}
-          <div className="w-full md:w-[380px] shrink-0 space-y-6">
+            {/* RAW WHY clearly separated under takeaway */}
             {rawDrivers.length > 0 && (
               <Card className="rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)]/70">
                 <CardContent className="py-3">
@@ -171,7 +144,26 @@ const StatsDailyPage: React.FC = () => {
             )}
           </div>
         </div>
-        {/* ===== end ===== */}
+
+        {/* ===== GRAPH: full width, bigger, inside a proper card ===== */}
+        <Card className="rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)]/80 shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl font-semibold text-accent">
+              Daily Metrics Trend
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="w-full h-[620px]">
+              <CombinedDailyMetricsChart
+                selectedDate={selectedDate}
+                rangeDays={rangeDays}
+                setRangeDays={setRangeDays}
+                refreshKey={refreshKey}
+                className="h-full w-full"
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
