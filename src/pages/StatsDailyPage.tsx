@@ -1,21 +1,92 @@
 // src/pages/StatsDailyPage.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/DatePicker";
 import CombinedDailyMetricsChart from "@/components/CombinedDailyMetricsChart";
 import ReadinessRiskCard from "@/components/ReadinessRiskCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/auth/AuthContext";
+import { fetchRiskForDate } from "@/data/dailyMetricsSupabase";
+
+// athlete-friendly takeaway mapper
+const friendlyDriver = (d: string) => {
+  const s = d ?? "";
+
+  let m = s.match(/Load spike:\s*ACWR\s*([0-9.]+)/i);
+  if (m) {
+    const v = Number(m[1]);
+    const times = isFinite(v) ? v.toFixed(1) : m[1];
+    return `You trained about ${times} X your usual amount this week — take 1–2 lighter days so your body catches up.`;
+  }
+
+  m = s.match(/Rising load:\s*ACWR\s*([0-9.]+)/i);
+  if (m) {
+    return `Training has climbed quickly lately — keep recovery strong so this work turns into speed.`;
+  }
+
+  m = s.match(/Resting HR \+(\d+)\s*bpm/i);
+  if (m) {
+    return `Morning heart rate is up ~${m[1]} bpm — common tired-body sign, so go easier and sleep well.`;
+  }
+  if (/Resting HR elevated/i.test(s)) {
+    return `Morning heart rate has been higher lately — watch fatigue and take an easier day if needed.`;
+  }
+
+  if (/Mood ↓|Mood down/i.test(s)) {
+    return `Mood has been lower than normal lately — that often means fatigue is building.`;
+  }
+
+  if (/Fatigue noted/i.test(s)) {
+    return `You’ve felt tired a few times this week — your body’s asking for a reset day.`;
+  }
+
+  if (/Stress noted|Stress flagged/i.test(s)) {
+    return `Stress has popped up a few times — keep sessions simple and recover well.`;
+  }
+
+  if (/Pain\/soreness noted|Pain noted/i.test(s)) {
+    return `More soreness has shown up — back off a little instead of forcing it.`;
+  }
+
+  if (/Performance risk high/i.test(s)) {
+    return `Your body is showing several small signs of fatigue at the same time — recovery will bring you back up.`;
+  }
+
+  return s;
+};
 
 const StatsDailyPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [rangeDays, setRangeDays] = useState<number>(14);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const [drivers, setDrivers] = useState<string[]>([]);
+
   const applyDate = () => setRefreshKey((k) => k + 1);
+
+  // pull raw drivers for selected date so we can show friendly takeaway here
+  useEffect(() => {
+    const load = async () => {
+      if (!user) {
+        setDrivers([]);
+        return;
+      }
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const r = await fetchRiskForDate(user.id, dateStr);
+      setDrivers(r?.drivers ?? []);
+    };
+    load();
+  }, [user?.id, selectedDate.getTime(), refreshKey]);
+
+  const friendlyTakeaways = drivers.map(friendlyDriver).filter(Boolean);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -43,14 +114,14 @@ const StatsDailyPage: React.FC = () => {
 
         {/* Top row: Risk + Takeaway */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch mb-6">
-          {/* LEFT: Risk card now includes raw Why */}
+          {/* LEFT: Risk card includes RAW Why */}
           <ReadinessRiskCard
             selectedDate={selectedDate}
             refreshKey={refreshKey}
             className="w-full h-full"
           />
 
-          {/* RIGHT: Takeaway card stays */}
+          {/* RIGHT: Athlete-friendly takeaway (wired in) */}
           <Card className="rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)]/80 shadow-md h-full">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg font-semibold text-accent">
@@ -58,10 +129,17 @@ const StatsDailyPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                This box is for the simple athlete-friendly summary.
-                (We’ll wire its text next if you want it to stay.)
-              </p>
+              {friendlyTakeaways.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No takeaway yet — log a few days of training to build trends.
+                </p>
+              ) : (
+                <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-3">
+                  {friendlyTakeaways.slice(0, 3).map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
         </div>
